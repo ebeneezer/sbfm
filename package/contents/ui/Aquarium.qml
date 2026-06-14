@@ -79,6 +79,7 @@ Item {
         anchors.right: parent.right
         y: root.waterSurfaceY - height / 2
         height: Math.max(1, root.height * 0.035)
+        z: 6
         visible: root.showWater && root.waterFraction > 0
         radius: height / 2
         color: Qt.rgba(0.78, 0.98, 1.0, 0.62)
@@ -135,6 +136,7 @@ Item {
         load: root.memoryLoad
         phase: swimClock.phase
         compact: root.compact
+        z: 5
         visible: root.showDuck
     }
 
