@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<kcfg xmlns="http://www.kde.org/standards/kcfg/1.0"
+      xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+      xsi:schemaLocation="http://www.kde.org/standards/kcfg/1.0
+      http://www.kde.org/standards/kcfg/1.0/kcfg.xsd">
+  <kcfgfile name=""/>
+
+  <group name="General">
+    <entry name="launchUrl" type="String">
+      <label>KDE application or URL to open when the widget is clicked.</label>
+      <default>applications:org.kde.plasma-systemmonitor.desktop</default>
+    </entry>
+    <entry name="showWater" type="Bool">
+      <label>Show the aquarium water background.</label>
+      <default>true</default>
+    </entry>
+    <entry name="showBubbles" type="Bool">
+      <label>Show CPU bubbles.</label>
+      <default>true</default>
+    </entry>
+    <entry name="showFish" type="Bool">
+      <label>Show network fish.</label>
+      <default>true</default>
+    </entry>
+    <entry name="showDuck" type="Bool">
+      <label>Show the duck.</label>
+      <default>true</default>
+    </entry>
+    <entry name="showWeeds" type="Bool">
+      <label>Show water plants.</label>
+      <default>true</default>
+    </entry>
+    <entry name="framesPerSecond" type="Int">
+      <label>Animation frame rate.</label>
+      <default>24</default>
+      <min>1</min>
+      <max>60</max>
+    </entry>
+    <entry name="networkInterface" type="String">
+      <label>Network interface used for fish speed.</label>
+      <default>all</default>
+    </entry>
+  </group>
+</kcfg>

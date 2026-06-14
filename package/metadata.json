@@ -1,0 +1,28 @@
+{
+    "KPackageStructure": "Plasma/Applet",
+    "KPlugin": {
+        "Authors": [
+            {
+                "Email": "dr.michael.raus@gmail.com",
+                "Name": "Dr. Michael Raus",
+                "Website": "https://github.com/ebeneezer/sbfm"
+            }
+        ],
+        "BugReportUrl": "https://github.com/ebeneezer/sbfm/issues",
+        "Category": "System Information",
+        "Description": "An aquarium-style system monitor for Plasma 6 panels inspired by BubbleFishyMon",
+        "EnabledByDefault": true,
+        "FormFactors": [
+            "desktop",
+            "horizontal",
+            "vertical"
+        ],
+        "Icon": "super-bubble-fishy-mon",
+        "Id": "de.drraus.plasma.superbubbyfishymon",
+        "License": "GPL-2.0-or-later",
+        "Name": "Super Bubble Fishy Mon",
+        "Version": "0.1.0",
+        "Website": "https://github.com/ebeneezer/sbfm"
+    },
+    "X-Plasma-API-Minimum-Version": "6.0"
+}

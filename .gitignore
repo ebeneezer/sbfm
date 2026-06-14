@@ -1,0 +1,9 @@
+.DS_Store
+*~
+*.bak
+*.swp
+*.qmlc
+*.jsc
+build/
+dist/
+.cache/
