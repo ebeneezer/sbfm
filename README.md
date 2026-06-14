@@ -39,3 +39,10 @@ KDE URL, defaulting to `applications:org.kde.plasma-systemmonitor.desktop`.
 The configuration page can toggle water, bubbles, fish, duck, and plants,
 control animation frames per second, and select which network interface drives
 fish speed.
+
+The bundled fish, bubble, plant, and duck sprites are generated from the
+original BubbleFishyMon headers in `vendor/bfm/include/`:
+
+```sh
+python3 tools/generate_original_assets.py
+```

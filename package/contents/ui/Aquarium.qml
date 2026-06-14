@@ -131,13 +131,27 @@ Item {
         Repeater {
             model: 8
 
-            Rectangle {
+            OriginalSprite {
+                readonly property int frame: Math.floor(swimClock.phase * 0.45 + index) % 8
+                readonly property var sprite: [
+                    [0, 120],
+                    [18, 120],
+                    [0, 135],
+                    [18, 135],
+                    [0, 150],
+                    [18, 135],
+                    [0, 135],
+                    [18, 120]
+                ][frame]
+
+                source: Qt.resolvedUrl("../images/original-sprites.png")
+                sourceX: sprite[0]
+                sourceY: sprite[1]
+                sourceWidth: 17
+                sourceHeight: 12
+                pixelScale: Math.max(1, root.height / 48)
                 x: parent.width * ((index + 0.3) / 8)
-                y: parent.height * 0.16
-                width: Math.max(2, parent.width * 0.012)
-                height: parent.height * (0.65 + Math.sin(swimClock.phase * 0.4 + index) * 0.18)
-                radius: width / 2
-                color: Qt.rgba(0.34, 0.86, 0.44, 0.56)
+                y: parent.height - height
                 transform: Rotation {
                     origin.x: width / 2
                     origin.y: height
