@@ -30,7 +30,8 @@ Item {
     readonly property color waterBottom: Qt.rgba(0.02, 0.42 + networkLoad * 0.16, 0.50 + cpuLoad * 0.10, 0.96)
     readonly property int localHour: currentTime.getHours()
     readonly property bool daytime: localHour >= 6 && localHour < 20
-    readonly property int bubbleCount: compact ? 7 : 18
+    readonly property int maxBubbleCount: compact ? 7 : 18
+    readonly property int bubbleCount: cpuLoad < 0.02 ? 0 : Math.max(1, Math.min(maxBubbleCount, Math.ceil(cpuLoad * maxBubbleCount)))
     readonly property int fishCount: compact ? 2 : 6
     readonly property real boundedMemoryLoad: clamp(memoryLoad, 0, 1)
     readonly property real waterFraction: boundedMemoryLoad
