@@ -16,7 +16,7 @@ OriginalSprite {
     property bool compact: false
 
     readonly property int frame: Math.floor(phase * 1.4) % 3
-    readonly property real duckWidth: Math.max(14, aquariumHeight * (compact ? 0.34 : 0.18))
+    readonly property real duckWidth: Math.max(18, aquariumHeight * (compact ? 0.46 : 0.22))
     readonly property real bob: Math.sin(phase * 0.75) * aquariumHeight * 0.018
     readonly property real floatingY: waterSurfaceY - height * 0.62 + bob
 

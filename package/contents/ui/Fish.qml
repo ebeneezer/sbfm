@@ -20,7 +20,7 @@ OriginalSprite {
     readonly property real swim: (phase * (0.045 + load * 0.22 + seed * 0.004) + seed * 0.137) % 1
     readonly property int frame: [0, 2, 4, 2][Math.floor(phase * (1.2 + load * 2.8) + seed) % 4]
     readonly property int spriteIndex: (leftToRight ? 1 : 0) + frame
-    readonly property real scaleBase: Math.max(1, aquariumHeight / (compact ? 26 : 44))
+    readonly property real scaleBase: Math.max(0.60, aquariumHeight / (compact ? 48 : 86))
     readonly property real waterDepth: Math.max(1, aquariumHeight - waterSurfaceY)
     readonly property real swimY: waterSurfaceY + waterDepth * (0.18 + ((seed * 29) % 58) / 100) + Math.sin(phase * 0.65 + seed) * waterDepth * 0.035
 
@@ -29,7 +29,7 @@ OriginalSprite {
     sourceY: Math.floor(spriteIndex / 2) * 15
     sourceWidth: 17
     sourceHeight: 14
-    pixelScale: scaleBase * (0.86 + (seed % 3) * 0.12)
+    pixelScale: scaleBase * (0.78 + (seed % 3) * 0.08)
     x: leftToRight ? -width + swim * (aquariumWidth + width * 2)
                    : aquariumWidth + width - swim * (aquariumWidth + width * 2)
     y: Math.max(waterSurfaceY, Math.min(aquariumHeight - height, swimY))
