@@ -30,7 +30,7 @@ Item {
     readonly property int bubbleCount: compact ? 7 : 18
     readonly property int fishCount: compact ? 2 : 6
     readonly property real boundedMemoryLoad: clamp(memoryLoad, 0, 1)
-    readonly property real waterFraction: clamp(0.10 + boundedMemoryLoad * 0.86, 0.10, 0.96)
+    readonly property real waterFraction: boundedMemoryLoad
     readonly property real waterSurfaceY: height * (1 - waterFraction)
 
     function clamp(value, low, high) {
@@ -50,7 +50,7 @@ Item {
         id: tankBase
         anchors.fill: parent
         radius: Math.max(2, Math.min(width, height) * 0.18)
-        color: Qt.rgba(0.02, 0.08, 0.10, 0.92)
+        color: Qt.rgba(0.05, 0.06, 0.08, 0.94)
         border.width: Math.max(1, Math.round(Kirigami.Units.devicePixelRatio))
         border.color: Qt.rgba(0.72, 0.96, 1.0, 0.55)
     }
@@ -70,6 +70,18 @@ Item {
             GradientStop { position: 0.72; color: root.waterBottom }
             GradientStop { position: 1.0; color: Qt.rgba(0.08, 0.12, 0.10, 0.96) }
         }
+    }
+
+    Rectangle {
+        id: waterline
+
+        anchors.left: parent.left
+        anchors.right: parent.right
+        y: root.waterSurfaceY - height / 2
+        height: Math.max(1, root.height * 0.035)
+        visible: root.showWater && root.waterFraction > 0
+        radius: height / 2
+        color: Qt.rgba(0.78, 0.98, 1.0, 0.62)
     }
 
     Repeater {
