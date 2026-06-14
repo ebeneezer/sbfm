@@ -30,6 +30,10 @@ Item {
     readonly property color waterBottom: Qt.rgba(0.02, 0.42 + networkLoad * 0.16, 0.50 + cpuLoad * 0.10, 0.96)
     readonly property int localHour: currentTime.getHours()
     readonly property bool daytime: localHour >= 6 && localHour < 20
+    readonly property real moonPhase: normalizedMoonPhase(currentTime)
+    readonly property real moonIllumination: (1 - Math.cos(moonPhase * Math.PI * 2)) / 2
+    readonly property int moonPhaseStep: Math.round(moonIllumination * 5)
+    readonly property bool waxingMoon: moonPhase < 0.5
     readonly property int maxBubbleCount: compact ? 7 : 18
     readonly property int bubbleCount: cpuLoad < 0.02 ? 0 : Math.max(1, Math.min(maxBubbleCount, Math.ceil(cpuLoad * maxBubbleCount)))
     readonly property int fishCount: compact ? 2 : 6
@@ -44,6 +48,14 @@ Item {
 
     function clamp(value, low, high) {
         return Math.max(low, Math.min(high, value))
+    }
+
+    function normalizedMoonPhase(date) {
+        const synodicMonth = 29.530588853;
+        const knownNewMoon = Date.UTC(2000, 0, 6, 18, 14, 0);
+        const days = (date.getTime() - knownNewMoon) / 86400000;
+        const age = ((days % synodicMonth) + synodicMonth) % synodicMonth;
+        return age / synodicMonth;
     }
 
     function ensureWaterPhysics() {
@@ -150,7 +162,7 @@ Item {
             border.color: Qt.rgba(1.0, 1.0, 0.76, 0.78)
         }
 
-        Item {
+        MoonPhase {
             id: moon
 
             readonly property real bodySize: Math.max(4, Math.min(parent.width, root.height) * 0.19)
@@ -160,21 +172,9 @@ Item {
             width: bodySize
             height: bodySize
             visible: !root.daytime && parent.height > height * 0.8
-
-            Rectangle {
-                anchors.fill: parent
-                radius: width / 2
-                color: Qt.rgba(0.86, 0.91, 1.0, 0.90)
-            }
-
-            Rectangle {
-                width: parent.width
-                height: parent.height
-                x: parent.width * 0.34
-                y: -parent.height * 0.06
-                radius: width / 2
-                color: Qt.rgba(0.04, 0.03, 0.16, 0.98)
-            }
+            phaseStep: root.moonPhaseStep
+            waxing: root.waxingMoon
+            shadowColor: Qt.rgba(0.04, 0.03, 0.16, 0.98)
         }
     }
 
