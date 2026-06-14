@@ -138,7 +138,7 @@ KCM.SimpleKCM {
         QQC2.ComboBox {
             id: networkInterfaceCombo
 
-            Kirigami.FormData.label: i18n("Fish interface:")
+            Kirigami.FormData.label: i18n("WiFish interface:")
             Layout.fillWidth: true
             model: networkSensorsModel
             textRole: "SensorId"
