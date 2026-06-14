@@ -10,6 +10,7 @@ OriginalSprite {
 
     property real aquariumWidth: 1
     property real aquariumHeight: 1
+    property real waterSurfaceY: 0
     property real load: 0
     property real phase: 0
     property bool compact: false
@@ -17,6 +18,7 @@ OriginalSprite {
     readonly property int frame: Math.floor(phase * 1.4) % 3
     readonly property real duckWidth: Math.max(14, aquariumHeight * (compact ? 0.34 : 0.18))
     readonly property real bob: Math.sin(phase * 0.75) * aquariumHeight * 0.018
+    readonly property real floatingY: waterSurfaceY - height * 0.62 + bob
 
     source: Qt.resolvedUrl("../images/original-ducks.png")
     sourceX: frame * 18
@@ -25,5 +27,5 @@ OriginalSprite {
     sourceHeight: 17
     pixelScale: duckWidth / 18
     x: Math.max(0, Math.min(aquariumWidth - width, aquariumWidth * (0.58 + load * 0.22) + Math.sin(phase * 0.22) * aquariumWidth * 0.05))
-    y: aquariumHeight * 0.08 + bob
+    y: Math.max(0, Math.min(aquariumHeight - height, floatingY))
 }

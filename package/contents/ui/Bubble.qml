@@ -10,6 +10,7 @@ OriginalSprite {
 
     property real aquariumWidth: 1
     property real aquariumHeight: 1
+    property real waterSurfaceY: 0
     property int seed: 0
     property real load: 0
     property real phase: 0
@@ -18,6 +19,7 @@ OriginalSprite {
     readonly property real speed: 0.18 + load * 0.58 + ((seed * 13) % 11) / 70
     readonly property real travel: (phase * speed + seed * 0.173) % 1
     readonly property int frame: Math.max(0, Math.min(4, Math.floor((1 - travel) * 5)))
+    readonly property real waterDepth: Math.max(1, aquariumHeight - waterSurfaceY)
     readonly property var sprite: [
         [33, 196, 1, 1],
         [27, 202, 2, 2],
@@ -33,6 +35,6 @@ OriginalSprite {
     sourceHeight: sprite[3]
     pixelScale: Math.max(1, aquariumHeight / 34) * (0.9 + load * 0.8)
     x: aquariumWidth * (0.08 + lane * 0.82) + Math.sin(phase * 0.9 + seed) * aquariumWidth * 0.018
-    y: aquariumHeight * (0.92 - travel * 0.98)
+    y: waterSurfaceY + waterDepth * (0.92 - travel * 0.90)
     opacity: 0.30 + load * 0.50
 }

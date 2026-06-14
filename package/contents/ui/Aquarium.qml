@@ -29,6 +29,13 @@ Item {
     readonly property color waterBottom: Qt.rgba(0.02, 0.42 + networkLoad * 0.16, 0.50 + cpuLoad * 0.10, 0.96)
     readonly property int bubbleCount: compact ? 7 : 18
     readonly property int fishCount: compact ? 2 : 6
+    readonly property real boundedMemoryLoad: clamp(memoryLoad, 0, 1)
+    readonly property real waterFraction: clamp(0.10 + boundedMemoryLoad * 0.86, 0.10, 0.96)
+    readonly property real waterSurfaceY: height * (1 - waterFraction)
+
+    function clamp(value, low, high) {
+        return Math.max(low, Math.min(high, value))
+    }
 
     Layout.minimumWidth: compact ? Kirigami.Units.iconSizes.medium : Kirigami.Units.gridUnit * 16
     Layout.minimumHeight: compact ? Kirigami.Units.iconSizes.medium : Kirigami.Units.gridUnit * 10
@@ -50,7 +57,10 @@ Item {
 
     Rectangle {
         id: water
-        anchors.fill: parent
+        anchors.left: parent.left
+        anchors.right: parent.right
+        anchors.bottom: parent.bottom
+        height: root.height * root.waterFraction
         visible: root.showWater
         radius: tankBase.radius
         border.width: tankBase.border.width
@@ -69,7 +79,7 @@ Item {
             readonly property real band: index / Math.max(1, root.compact ? 2 : 5)
 
             x: -width * 0.2 + Math.sin(swimClock.phase * 0.35 + index) * width * 0.08
-            y: root.height * (0.16 + band * 0.13)
+            y: root.waterSurfaceY + water.height * (0.12 + band * 0.14)
             width: root.width * 1.4
             height: Math.max(1, root.height * 0.018)
             radius: height / 2
@@ -84,6 +94,7 @@ Item {
         Bubble {
             aquariumWidth: root.width
             aquariumHeight: root.height
+            waterSurfaceY: root.waterSurfaceY
             seed: index
             load: root.cpuLoad
             phase: swimClock.phase
@@ -96,6 +107,7 @@ Item {
         Fish {
             aquariumWidth: root.width
             aquariumHeight: root.height
+            waterSurfaceY: root.waterSurfaceY
             seed: index
             load: root.networkLoad
             phase: swimClock.phase
@@ -107,6 +119,7 @@ Item {
         id: duck
         aquariumWidth: root.width
         aquariumHeight: root.height
+        waterSurfaceY: root.waterSurfaceY
         load: root.memoryLoad
         phase: swimClock.phase
         compact: root.compact

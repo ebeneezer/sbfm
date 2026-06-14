@@ -10,6 +10,7 @@ OriginalSprite {
 
     property real aquariumWidth: 1
     property real aquariumHeight: 1
+    property real waterSurfaceY: 0
     property int seed: 0
     property real load: 0
     property real phase: 0
@@ -20,6 +21,8 @@ OriginalSprite {
     readonly property int frame: [0, 2, 4, 2][Math.floor(phase * (1.2 + load * 2.8) + seed) % 4]
     readonly property int spriteIndex: (leftToRight ? 1 : 0) + frame
     readonly property real scaleBase: Math.max(1, aquariumHeight / (compact ? 26 : 44))
+    readonly property real waterDepth: Math.max(1, aquariumHeight - waterSurfaceY)
+    readonly property real swimY: waterSurfaceY + waterDepth * (0.18 + ((seed * 29) % 58) / 100) + Math.sin(phase * 0.65 + seed) * waterDepth * 0.035
 
     source: Qt.resolvedUrl("../images/original-sprites.png")
     sourceX: leftToRight ? 18 : 0
@@ -29,6 +32,6 @@ OriginalSprite {
     pixelScale: scaleBase * (0.86 + (seed % 3) * 0.12)
     x: leftToRight ? -width + swim * (aquariumWidth + width * 2)
                    : aquariumWidth + width - swim * (aquariumWidth + width * 2)
-    y: aquariumHeight * (0.20 + ((seed * 29) % 58) / 100) + Math.sin(phase * 0.65 + seed) * aquariumHeight * 0.035
+    y: Math.max(waterSurfaceY, Math.min(aquariumHeight - height, swimY))
     opacity: 0.74 + load * 0.24
 }
