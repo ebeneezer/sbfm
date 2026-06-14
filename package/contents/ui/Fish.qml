@@ -15,9 +15,11 @@ OriginalSprite {
     property real load: 0
     property real phase: 0
     property bool compact: false
+    property real swimProgress: (seed * 0.137) % 1
 
     readonly property bool leftToRight: seed % 2 === 0
-    readonly property real swim: (phase * (0.045 + load * 0.22 + seed * 0.004) + seed * 0.137) % 1
+    readonly property real swim: swimProgress
+    readonly property real swimSpeed: 0.018 + load * 0.10 + seed * 0.002
     readonly property int frame: [0, 2, 4, 2][Math.floor(phase * (1.2 + load * 2.8) + seed) % 4]
     readonly property int spriteIndex: (leftToRight ? 1 : 0) + frame
     readonly property real scaleBase: Math.max(0.60, aquariumHeight / (compact ? 48 : 86))
@@ -34,4 +36,11 @@ OriginalSprite {
                    : aquariumWidth + width - swim * (aquariumWidth + width * 2)
     y: Math.max(waterSurfaceY, Math.min(aquariumHeight - height, swimY))
     opacity: 0.74 + load * 0.24
+
+    Timer {
+        interval: 80
+        repeat: true
+        running: root.visible
+        onTriggered: root.swimProgress = (root.swimProgress + root.swimSpeed * interval / 1000) % 1
+    }
 }

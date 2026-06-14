@@ -16,7 +16,9 @@ PlasmoidItem {
 
     readonly property real cpuLoad: percentSensorToLoad(cpuSensor.value)
     readonly property real memoryLoad: percentSensorToLoad(memorySensor.value)
-    readonly property real networkLoad: clamp((downloadSensor.value + uploadSensor.value) / 10485760, 0, 1)
+    readonly property real rawNetworkLoad: clamp((downloadSensor.value + uploadSensor.value) / 10485760, 0, 1)
+    property real smoothedNetworkLoad: 0
+    readonly property real networkLoad: smoothedNetworkLoad
     readonly property int frameInterval: Math.round(1000 / clamp(Plasmoid.configuration.framesPerSecond || 24, 1, 60))
     readonly property string networkInterface: Plasmoid.configuration.networkInterface || "all"
 
@@ -49,6 +51,22 @@ PlasmoidItem {
 
     function enabledByDefault(value) {
         return value !== false;
+    }
+
+    Timer {
+        interval: 250
+        repeat: true
+        running: true
+        triggeredOnStart: true
+        onTriggered: {
+            const target = root.rawNetworkLoad;
+            const maxRise = 0.06;
+            const maxFall = 0.025;
+            const delta = target - root.smoothedNetworkLoad;
+            root.smoothedNetworkLoad = clamp(root.smoothedNetworkLoad
+                                             + clamp(delta, -maxFall, maxRise) * 0.55,
+                                             0, 1);
+        }
     }
 
     compactRepresentation: panelRepresentation
