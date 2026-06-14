@@ -37,7 +37,7 @@ OriginalSprite {
     sourceWidth: 18
     sourceHeight: 17
     pixelScale: duckWidth / 18
-    mirrored: !swimmingRight
+    mirrored: swimmingRight
     x: swimX
     y: Math.max(0, Math.min(aquariumHeight - height, floatingY))
 
