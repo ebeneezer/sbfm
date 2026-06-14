@@ -23,10 +23,13 @@ Item {
     property bool showDuck: true
     property bool showWeeds: true
     property int frameInterval: 42
+    property var currentTime: new Date()
 
     readonly property real loadPulse: 0.5 + cpuLoad * 1.6 + networkLoad * 1.2
     readonly property color waterTop: Qt.rgba(0.05, 0.22 + cpuLoad * 0.12, 0.32 + networkLoad * 0.12, 0.92)
     readonly property color waterBottom: Qt.rgba(0.02, 0.42 + networkLoad * 0.16, 0.50 + cpuLoad * 0.10, 0.96)
+    readonly property int localHour: currentTime.getHours()
+    readonly property bool daytime: localHour >= 6 && localHour < 20
     readonly property int bubbleCount: compact ? 7 : 18
     readonly property int fishCount: compact ? 2 : 6
     readonly property real boundedMemoryLoad: clamp(memoryLoad, 0, 1)
@@ -53,6 +56,70 @@ Item {
         color: Qt.rgba(0.05, 0.06, 0.08, 0.94)
         border.width: Math.max(1, Math.round(Kirigami.Units.devicePixelRatio))
         border.color: Qt.rgba(0.72, 0.96, 1.0, 0.55)
+    }
+
+    Rectangle {
+        id: sky
+
+        anchors.left: parent.left
+        anchors.right: parent.right
+        anchors.top: parent.top
+        height: root.waterSurfaceY
+        radius: tankBase.radius
+        visible: height > 0
+        gradient: Gradient {
+            GradientStop {
+                position: 0.0
+                color: root.daytime ? Qt.rgba(0.35, 0.78, 1.0, 0.96) : Qt.rgba(0.04, 0.03, 0.16, 0.96)
+            }
+            GradientStop {
+                position: 1.0
+                color: root.daytime ? Qt.rgba(0.74, 0.92, 1.0, 0.94) : Qt.rgba(0.12, 0.06, 0.28, 0.96)
+            }
+        }
+
+        Rectangle {
+            id: sun
+
+            readonly property real bodySize: Math.max(4, Math.min(parent.width, root.height) * 0.20)
+
+            x: parent.width * 0.14
+            y: Math.max(1, parent.height * 0.18)
+            width: bodySize
+            height: bodySize
+            radius: width / 2
+            visible: root.daytime && parent.height > height * 0.8
+            color: Qt.rgba(1.0, 0.86, 0.18, 0.95)
+            border.width: Math.max(1, Math.round(Kirigami.Units.devicePixelRatio))
+            border.color: Qt.rgba(1.0, 1.0, 0.76, 0.78)
+        }
+
+        Item {
+            id: moon
+
+            readonly property real bodySize: Math.max(4, Math.min(parent.width, root.height) * 0.19)
+
+            x: parent.width * 0.16
+            y: Math.max(1, parent.height * 0.16)
+            width: bodySize
+            height: bodySize
+            visible: !root.daytime && parent.height > height * 0.8
+
+            Rectangle {
+                anchors.fill: parent
+                radius: width / 2
+                color: Qt.rgba(0.86, 0.91, 1.0, 0.90)
+            }
+
+            Rectangle {
+                width: parent.width
+                height: parent.height
+                x: parent.width * 0.34
+                y: -parent.height * 0.06
+                radius: width / 2
+                color: Qt.rgba(0.04, 0.03, 0.16, 0.98)
+            }
+        }
     }
 
     Rectangle {
@@ -224,5 +291,22 @@ Item {
         repeat: true
         running: true
         onTriggered: tick += 1 + Math.round(root.loadPulse)
+    }
+
+    Timer {
+        interval: 60000
+        repeat: true
+        running: true
+        triggeredOnStart: true
+        onTriggered: root.currentTime = new Date()
+    }
+
+    Rectangle {
+        anchors.fill: parent
+        z: 10
+        radius: tankBase.radius
+        color: "transparent"
+        border.width: tankBase.border.width
+        border.color: tankBase.border.color
     }
 }
