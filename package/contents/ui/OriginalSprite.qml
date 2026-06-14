@@ -15,6 +15,7 @@ Item {
     property int sourceHeight: 1
     property real pixelScale: 1
     property bool mirrored: false
+    property bool flipped: false
 
     width: sourceWidth * pixelScale
     height: sourceHeight * pixelScale
@@ -27,5 +28,11 @@ Item {
         mirror: root.mirrored
         smooth: false
         antialiasing: false
+
+        transform: Scale {
+            origin.x: root.width / 2
+            origin.y: root.height / 2
+            yScale: root.flipped ? -1 : 1
+        }
     }
 }

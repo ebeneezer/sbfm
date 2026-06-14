@@ -16,6 +16,7 @@ OriginalSprite {
     property bool compact: false
     property real swimProgress: 0
     property real wingProgress: 0
+    property bool upsideDown: false
 
     readonly property real travel: swimProgress
     readonly property bool swimmingRight: travel < 1
@@ -25,11 +26,26 @@ OriginalSprite {
     readonly property real duckWidth: Math.max(18, aquariumHeight * (compact ? 0.46 : 0.22))
     readonly property real bob: Math.sin(wingProgress * 0.35) * aquariumHeight * 0.018
     readonly property real waterlineSpriteOffset: 14 / 17
-    readonly property real floatingY: waterSurfaceY - height * waterlineSpriteOffset + bob
+    readonly property real normalFloatingY: waterSurfaceY - height * waterlineSpriteOffset + bob
+    readonly property real diveOffset: upsideDown ? height * 10 / 17 : 0
+    readonly property real floatingY: normalFloatingY + diveOffset
     readonly property real leftOutX: -width
     readonly property real rightOutX: aquariumWidth
     readonly property real span: aquariumWidth + width
     readonly property real swimX: swimmingRight ? leftOutX + leg * span : rightOutX - leg * span
+
+    function updateDiveState() {
+        if (aquariumHeight <= 0) {
+            return;
+        }
+
+        const posY = waterSurfaceY / aquariumHeight * 56 - 14;
+        if (!upsideDown && posY < 2) {
+            upsideDown = true;
+        } else if (upsideDown && posY > 5) {
+            upsideDown = false;
+        }
+    }
 
     source: Qt.resolvedUrl("../images/original-ducks.png")
     sourceX: frame * 18
@@ -38,6 +54,7 @@ OriginalSprite {
     sourceHeight: 17
     pixelScale: duckWidth / 18
     mirrored: swimmingRight
+    flipped: upsideDown
     x: swimX
     y: Math.max(0, Math.min(aquariumHeight - height, floatingY))
 
@@ -56,4 +73,8 @@ OriginalSprite {
         loops: Animation.Infinite
         running: true
     }
+
+    Component.onCompleted: updateDiveState()
+    onWaterSurfaceYChanged: updateDiveState()
+    onAquariumHeightChanged: updateDiveState()
 }
