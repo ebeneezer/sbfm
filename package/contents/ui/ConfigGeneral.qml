@@ -6,12 +6,11 @@
 import QtQuick
 import QtQuick.Controls as QQC2
 import QtQuick.Layouts
-import QtCore
-import Qt.labs.folderlistmodel
 
 import org.kde.kcmutils as KCM
 import org.kde.kitemmodels as KItemModels
 import org.kde.kirigami as Kirigami
+import org.kde.plasma.private.kicker as Kicker
 import org.kde.ksysguard.sensors as Sensors
 
 KCM.SimpleKCM {
@@ -35,130 +34,19 @@ KCM.SimpleKCM {
     property bool cfg_showWeedsDefault: true
     property int cfg_framesPerSecondDefault: 24
     property string cfg_networkInterfaceDefault: "all"
-    property var appChoices: []
 
     signal configurationChanged
 
-    function pathToUrl(path) {
-        if (!path || path.length === 0) {
-            return "";
-        }
-        return path.indexOf("file://") === 0 ? path : "file://" + path;
-    }
-
-    function unescapeDesktopValue(value) {
-        return value.replace(/\\s/g, " ").replace(/\\n/g, "\n").replace(/\\t/g, "\t").replace(/\\\\/g, "\\");
-    }
-
-    function desktopValues(content) {
-        const values = {};
-        const lines = content.split(/\r?\n/);
-        let inDesktopEntry = false;
-
-        for (let i = 0; i < lines.length; ++i) {
-            const line = lines[i].trim();
-            if (line.length === 0 || line[0] === "#") {
-                continue;
-            }
-            if (line[0] === "[" && line[line.length - 1] === "]") {
-                inDesktopEntry = line === "[Desktop Entry]";
-                continue;
-            }
-            if (!inDesktopEntry) {
-                continue;
-            }
-
-            const separator = line.indexOf("=");
-            if (separator <= 0) {
-                continue;
-            }
-            values[line.slice(0, separator)] = unescapeDesktopValue(line.slice(separator + 1));
-        }
-
-        return values;
-    }
-
-    function localizedValue(values, key) {
-        const locale = Qt.locale().name;
-        const shortLocale = locale.split("_")[0];
-        return values[key + "[" + locale + "]"] || values[key + "[" + shortLocale + "]"] || values[key] || "";
-    }
-
-    function boolValue(values, key) {
-        return (values[key] || "").toLowerCase() === "true";
-    }
-
-    function readDesktopFile(url) {
-        const request = new XMLHttpRequest();
-        request.open("GET", url, false);
-        request.send();
-        return request.status === 0 || request.status === 200 ? request.responseText : "";
-    }
-
-    function entryFromModel(model, row) {
-        const fileName = model.get(row, "fileName");
-        const fileUrl = model.get(row, "fileUrl") || model.get(row, "fileURL") || pathToUrl(model.get(row, "filePath"));
-        const values = desktopValues(readDesktopFile(fileUrl));
-        const name = localizedValue(values, "Name");
-
-        if (values.Type !== "Application" || name.length === 0 || !values.Exec
-                || boolValue(values, "Hidden") || boolValue(values, "NoDisplay") || boolValue(values, "Terminal")) {
-            return null;
-        }
-
-        return {
-            id: fileName,
-            name: name,
-            icon: values.Icon || "application-x-executable",
-            value: "applications:" + fileName
-        };
-    }
-
-    function appendAppsFromModel(result, model) {
-        for (let row = 0; row < model.count; ++row) {
-            const entry = entryFromModel(model, row);
-            if (entry !== null) {
-                result[entry.id] = entry;
-            }
-        }
-    }
-
-    function rebuildAppChoices() {
-        const appsById = {};
-        appendAppsFromModel(appsById, systemApplicationsModel);
-        appendAppsFromModel(appsById, userApplicationsModel);
-
-        const apps = Object.keys(appsById).map(id => appsById[id]);
-        apps.sort((left, right) => left.name.localeCompare(right.name));
-
-        const choices = [{ id: "org.kde.plasma-systemmonitor.desktop", name: i18n("System Monitor"), icon: "utilities-system-monitor", value: cfg_launchUrlDefault }];
-        const knownValues = {};
-        knownValues[cfg_launchUrlDefault] = true;
-
-        for (let i = 0; i < apps.length; ++i) {
-            if (!knownValues[apps[i].value]) {
-                choices.push(apps[i]);
-                knownValues[apps[i].value] = true;
-            }
-        }
-
-        if (cfg_launchUrl && !knownValues[cfg_launchUrl]) {
-            choices.unshift({ id: "__configured__", name: i18n("Configured launcher"), icon: "application-x-executable", value: cfg_launchUrl });
-        }
-
-        appChoices = choices;
-        syncLaunchCombo();
-    }
-
     function syncLaunchCombo() {
-        for (let row = 0; row < appChoices.length; ++row) {
-            if (appChoices[row].value === cfg_launchUrl) {
-                launchCombo.currentIndex = row;
+        for (let row = 0; row < appFilterModel.count; ++row) {
+            const launcher = appFilterModel.data(appFilterModel.index(row, 0), "favoriteId");
+            if (launcher === cfg_launchUrl) {
+                clickAppCombo.currentIndex = row;
                 return;
             }
         }
 
-        launchCombo.currentIndex = 0;
+        clickAppCombo.currentIndex = -1;
     }
 
     function interfaceFromSensorId(sensorId) {
@@ -189,15 +77,28 @@ KCM.SimpleKCM {
             Layout.fillWidth: true
 
             QQC2.ComboBox {
-                id: launchCombo
+                id: clickAppCombo
 
                 Layout.fillWidth: true
-                model: root.appChoices
-                textRole: "name"
-                valueRole: "value"
-                onActivated: {
-                    root.cfg_launchUrl = currentValue;
-                    root.configurationChanged();
+                model: appFilterModel
+                textRole: "display"
+                valueRole: "favoriteId"
+                displayText: currentIndex >= 0
+                    ? appFilterModel.data(appFilterModel.index(currentIndex, 0), "display")
+                    : i18n("Select application")
+
+                delegate: QQC2.ItemDelegate {
+                    width: clickAppCombo.width
+                    text: model.display
+                    icon.name: model.decoration || "application-x-executable"
+                }
+
+                onActivated: row => {
+                    const launcher = appFilterModel.data(appFilterModel.index(row, 0), "favoriteId");
+                    if (launcher) {
+                        root.cfg_launchUrl = launcher;
+                        root.configurationChanged();
+                    }
                 }
             }
 
@@ -205,7 +106,7 @@ KCM.SimpleKCM {
                 icon.name: "view-refresh-symbolic"
                 display: QQC2.AbstractButton.IconOnly
                 text: i18n("Refresh applications")
-                onClicked: root.rebuildAppChoices()
+                onClicked: appModel.refresh()
             }
         }
 
@@ -308,24 +209,28 @@ KCM.SimpleKCM {
         id: sensorTreeModel
     }
 
-    FolderListModel {
-        id: systemApplicationsModel
+    Kicker.AppsModel {
+        id: appModel
 
-        folder: "file:///usr/share/applications"
-        nameFilters: ["*.desktop"]
-        showDirs: false
-        sortField: FolderListModel.Name
-        onCountChanged: root.rebuildAppChoices()
+        autoPopulate: true
+        flat: true
+        sorted: true
+        showSeparators: false
+        onCountChanged: root.syncLaunchCombo()
     }
 
-    FolderListModel {
-        id: userApplicationsModel
+    KItemModels.KSortFilterProxyModel {
+        id: appFilterModel
 
-        folder: root.pathToUrl(StandardPaths.writableLocation(StandardPaths.ApplicationsLocation))
-        nameFilters: ["*.desktop"]
-        showDirs: false
-        sortField: FolderListModel.Name
-        onCountChanged: root.rebuildAppChoices()
+        sourceModel: appModel
+        sortRoleName: "display"
+        sortOrder: Qt.AscendingOrder
+        filterRowCallback: function(row, parent) {
+            const launcher = sourceModel.data(sourceModel.index(row, 0, parent), "favoriteId");
+            return launcher && launcher.length > 0;
+        }
+
+        onCountChanged: root.syncLaunchCombo()
     }
 
     KItemModels.KSortFilterProxyModel {
@@ -346,8 +251,9 @@ KCM.SimpleKCM {
 
     Component.onCompleted: {
         fpsSlider.value = cfg_framesPerSecond;
-        rebuildAppChoices();
         syncNetworkCombo();
+        appModel.refresh();
+        syncLaunchCombo();
     }
 
     onCfg_launchUrlChanged: syncLaunchCombo()
