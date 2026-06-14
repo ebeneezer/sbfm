@@ -30,6 +30,14 @@
       <label>Show water plants.</label>
       <default>true</default>
     </entry>
+    <entry name="weatherCondition" type="String">
+      <label>Weather visualization mode.</label>
+      <default>clear</default>
+    </entry>
+    <entry name="weatherLocation" type="String">
+      <label>Location used for weather lookup.</label>
+      <default></default>
+    </entry>
     <entry name="framesPerSecond" type="Int">
       <label>Animation frame rate.</label>
       <default>24</default>

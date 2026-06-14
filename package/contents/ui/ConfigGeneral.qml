@@ -24,6 +24,8 @@ KCM.SimpleKCM {
     property alias cfg_showFish: showFishCheck.checked
     property alias cfg_showDuck: showDuckCheck.checked
     property alias cfg_showWeeds: showWeedsCheck.checked
+    property string cfg_weatherCondition: "clear"
+    property alias cfg_weatherLocation: weatherLocationField.text
     property int cfg_framesPerSecond: 24
     property string cfg_networkInterface: "all"
     property string cfg_launchUrlDefault: "applications:org.kde.plasma-systemmonitor.desktop"
@@ -32,8 +34,15 @@ KCM.SimpleKCM {
     property bool cfg_showFishDefault: true
     property bool cfg_showDuckDefault: true
     property bool cfg_showWeedsDefault: true
+    property string cfg_weatherConditionDefault: "clear"
+    property string cfg_weatherLocationDefault: ""
     property int cfg_framesPerSecondDefault: 24
     property string cfg_networkInterfaceDefault: "all"
+    property var weatherChoices: [
+        { text: i18n("Clear"), value: "clear" },
+        { text: i18n("Cloudy"), value: "cloudy" },
+        { text: i18n("Rain"), value: "rain" }
+    ]
 
     signal configurationChanged
 
@@ -67,6 +76,16 @@ KCM.SimpleKCM {
             }
         }
         networkInterfaceCombo.currentIndex = -1;
+    }
+
+    function syncWeatherCombo() {
+        for (let row = 0; row < weatherChoices.length; ++row) {
+            if (weatherChoices[row].value === cfg_weatherCondition) {
+                weatherConditionCombo.currentIndex = row;
+                return;
+            }
+        }
+        weatherConditionCombo.currentIndex = 0;
     }
 
     Kirigami.FormLayout {
@@ -149,6 +168,29 @@ KCM.SimpleKCM {
             checked: true
             text: i18n("Water plants")
             onToggled: root.configurationChanged()
+        }
+
+        QQC2.ComboBox {
+            id: weatherConditionCombo
+
+            Kirigami.FormData.label: i18n("Weather:")
+            Layout.fillWidth: true
+            model: root.weatherChoices
+            textRole: "text"
+            valueRole: "value"
+            onActivated: {
+                root.cfg_weatherCondition = currentValue;
+                root.configurationChanged();
+            }
+        }
+
+        QQC2.TextField {
+            id: weatherLocationField
+
+            Kirigami.FormData.label: i18n("Location:")
+            Layout.fillWidth: true
+            placeholderText: i18n("City or coordinates")
+            onTextEdited: root.configurationChanged()
         }
 
         RowLayout {
@@ -251,12 +293,14 @@ KCM.SimpleKCM {
 
     Component.onCompleted: {
         fpsSlider.value = cfg_framesPerSecond;
+        syncWeatherCombo();
         syncNetworkCombo();
         appModel.refresh();
         syncLaunchCombo();
     }
 
     onCfg_launchUrlChanged: syncLaunchCombo()
+    onCfg_weatherConditionChanged: syncWeatherCombo()
     onCfg_framesPerSecondChanged: fpsSlider.value = cfg_framesPerSecond
     onCfg_networkInterfaceChanged: syncNetworkCombo()
 }

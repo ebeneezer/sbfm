@@ -22,6 +22,7 @@ Item {
     property bool showFish: true
     property bool showDuck: true
     property bool showWeeds: true
+    property string weatherCondition: "clear"
     property int frameInterval: 42
     property var currentTime: new Date()
 
@@ -30,6 +31,9 @@ Item {
     readonly property color waterBottom: Qt.rgba(0.02, 0.42 + networkLoad * 0.16, 0.50 + cpuLoad * 0.10, 0.96)
     readonly property int localHour: currentTime.getHours()
     readonly property bool daytime: localHour >= 6 && localHour < 20
+    readonly property bool rainyWeather: weatherCondition === "rain"
+    readonly property bool cloudyWeather: rainyWeather || weatherCondition === "cloudy"
+    readonly property bool clearWeather: !cloudyWeather
     readonly property real moonPhase: normalizedMoonPhase(currentTime)
     readonly property real moonIllumination: (1 - Math.cos(moonPhase * Math.PI * 2)) / 2
     readonly property int moonPhaseStep: Math.round(moonIllumination * 5)
@@ -103,6 +107,11 @@ Item {
             levels[column] = clamp(levels[column] - waterWaveLimit * (0.45 + cpuLoad), target - waterWaveLimit, target + waterWaveLimit);
         }
 
+        if (rainyWeather && swimClock.tick % 4 === 0) {
+            const rainColumn = 1 + ((swimClock.tick * 11) % Math.max(1, waterColumnCount - 2));
+            levels[rainColumn] = clamp(levels[rainColumn] + waterWaveLimit * 0.24, target - waterWaveLimit, target + waterWaveLimit);
+        }
+
         waterLevels = levels;
         waterVelocities = velocities;
         water.requestPaint();
@@ -156,7 +165,7 @@ Item {
             width: bodySize
             height: bodySize
             radius: width / 2
-            visible: root.daytime && parent.height > height * 0.8
+            visible: root.daytime && root.clearWeather && parent.height > height * 0.8
             color: Qt.rgba(1.0, 0.86, 0.18, 0.95)
             border.width: Math.max(1, Math.round(Kirigami.Units.devicePixelRatio))
             border.color: Qt.rgba(1.0, 1.0, 0.76, 0.78)
@@ -171,10 +180,58 @@ Item {
             y: Math.max(1, parent.height * 0.16)
             width: bodySize
             height: bodySize
-            visible: !root.daytime && parent.height > height * 0.8
+            visible: !root.daytime && !root.cloudyWeather && parent.height > height * 0.8
             phaseStep: root.moonPhaseStep
             waxing: root.waxingMoon
             shadowColor: Qt.rgba(0.04, 0.03, 0.16, 0.98)
+        }
+
+        Repeater {
+            model: root.cloudyWeather ? (root.compact ? 2 : 5) : 0
+
+            Item {
+                readonly property real cloudWidth: Math.max(10, root.width * (0.38 + (index % 2) * 0.12))
+                readonly property real cloudHeight: Math.max(4, root.height * (0.10 + (index % 3) * 0.018))
+                readonly property real track: sky.width + cloudWidth * 2
+                readonly property real progress: (swimClock.phase * (0.006 + index * 0.0015) + index * 0.37) % 1
+                readonly property color cloudColor: root.daytime
+                    ? Qt.rgba(0.92, 0.96, 1.0, root.rainyWeather ? 0.72 : 0.62)
+                    : Qt.rgba(0.30, 0.32, 0.48, root.rainyWeather ? 0.78 : 0.58)
+
+                x: progress * track - cloudWidth
+                y: Math.max(1, sky.height * (0.12 + (index % 3) * 0.17))
+                width: cloudWidth
+                height: cloudHeight
+                visible: sky.height > height
+                opacity: root.rainyWeather ? 0.92 : 0.78
+
+                Rectangle {
+                    x: parent.width * 0.02
+                    y: parent.height * 0.40
+                    width: parent.width * 0.78
+                    height: parent.height * 0.48
+                    radius: height / 2
+                    color: parent.cloudColor
+                }
+
+                Rectangle {
+                    x: parent.width * 0.24
+                    y: parent.height * 0.05
+                    width: parent.width * 0.38
+                    height: parent.height * 0.70
+                    radius: width / 2
+                    color: parent.cloudColor
+                }
+
+                Rectangle {
+                    x: parent.width * 0.52
+                    y: parent.height * 0.20
+                    width: parent.width * 0.36
+                    height: parent.height * 0.62
+                    radius: width / 2
+                    color: parent.cloudColor
+                }
+            }
         }
     }
 
@@ -229,6 +286,24 @@ Item {
         }
         onWidthChanged: requestPaint()
         onHeightChanged: requestPaint()
+    }
+
+    Repeater {
+        model: root.rainyWeather ? (root.compact ? 18 : 60) : 0
+
+        Rectangle {
+            readonly property real lane: ((index * 37) % 100) / 100
+            readonly property real travel: (swimClock.phase * (0.18 + (index % 5) * 0.022) + index * 0.071) % 1
+
+            x: root.width * lane
+            y: -height + travel * (root.height + height)
+            width: Math.max(1, root.width * 0.018)
+            height: Math.max(4, root.height * 0.16)
+            radius: width / 2
+            color: root.daytime ? Qt.rgba(0.80, 0.90, 1.0, 0.54) : Qt.rgba(0.62, 0.76, 1.0, 0.50)
+            rotation: 8
+            visible: root.showWater || root.waterFraction < 0.98
+        }
     }
 
     Repeater {

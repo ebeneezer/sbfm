@@ -21,6 +21,8 @@ PlasmoidItem {
     readonly property real networkLoad: smoothedNetworkLoad
     readonly property int frameInterval: Math.round(1000 / clamp(Plasmoid.configuration.framesPerSecond || 24, 1, 60))
     readonly property string networkInterface: Plasmoid.configuration.networkInterface || "all"
+    readonly property string weatherCondition: Plasmoid.configuration.weatherCondition || "clear"
+    readonly property string weatherLocation: Plasmoid.configuration.weatherLocation || ""
 
     Plasmoid.title: i18n("Super Bubble Fishy Mon")
     Plasmoid.icon: "super-bubble-fishy-mon"
@@ -116,6 +118,7 @@ PlasmoidItem {
                 showFish: root.enabledByDefault(Plasmoid.configuration.showFish)
                 showDuck: root.enabledByDefault(Plasmoid.configuration.showDuck)
                 showWeeds: root.enabledByDefault(Plasmoid.configuration.showWeeds)
+                weatherCondition: root.weatherCondition
                 frameInterval: root.frameInterval
             }
 
