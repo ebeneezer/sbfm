@@ -35,10 +35,65 @@ Item {
     readonly property int fishCount: compact ? 2 : 6
     readonly property real boundedMemoryLoad: clamp(memoryLoad, 0, 1)
     readonly property real waterFraction: boundedMemoryLoad
+    readonly property real waterDepth: height * waterFraction
     readonly property real waterSurfaceY: height * (1 - waterFraction)
+    readonly property int waterColumnCount: compact ? 18 : 56
+    readonly property real waterWaveLimit: Math.max(1, height * (compact ? 0.055 : 0.035))
+    property var waterLevels: []
+    property var waterVelocities: []
 
     function clamp(value, low, high) {
         return Math.max(low, Math.min(high, value))
+    }
+
+    function ensureWaterPhysics() {
+        if (waterLevels.length === waterColumnCount && waterVelocities.length === waterColumnCount) {
+            return;
+        }
+
+        const levels = [];
+        const velocities = [];
+        for (let i = 0; i < waterColumnCount; ++i) {
+            levels.push(waterSurfaceY);
+            velocities.push(0);
+        }
+        waterLevels = levels;
+        waterVelocities = velocities;
+    }
+
+    function updateWaterPhysics() {
+        ensureWaterPhysics();
+
+        const target = waterSurfaceY;
+        const levels = waterLevels.slice();
+        const velocities = waterVelocities.slice();
+        const last = waterColumnCount - 1;
+        const speedLimit = Math.max(0.35, height * 0.030);
+
+        levels[0] = target;
+        levels[last] = target;
+        velocities[0] = 0;
+        velocities[last] = 0;
+
+        for (let i = 1; i < last; ++i) {
+            const curvature = levels[i - 1] + levels[i + 1] - 2 * levels[i];
+            const restore = target - levels[i];
+            velocities[i] = clamp((velocities[i] + curvature * 0.18 + restore * 0.026) * 0.88,
+                                  -speedLimit, speedLimit);
+        }
+
+        for (let j = 1; j < last; ++j) {
+            levels[j] = clamp(levels[j] + velocities[j], target - waterWaveLimit, target + waterWaveLimit);
+        }
+
+        if (showBubbles && bubbleCount > 0 && swimClock.tick % Math.max(3, Math.round(18 - cpuLoad * 14)) === 0) {
+            const column = 1 + ((swimClock.tick * 7) % Math.max(1, waterColumnCount - 2));
+            levels[column] = clamp(levels[column] - waterWaveLimit * (0.45 + cpuLoad), target - waterWaveLimit, target + waterWaveLimit);
+        }
+
+        waterLevels = levels;
+        waterVelocities = velocities;
+        water.requestPaint();
     }
 
     Layout.minimumWidth: compact ? Kirigami.Units.iconSizes.medium : Kirigami.Units.gridUnit * 16
@@ -123,34 +178,57 @@ Item {
         }
     }
 
-    Rectangle {
+    Canvas {
         id: water
-        anchors.left: parent.left
-        anchors.right: parent.right
-        anchors.bottom: parent.bottom
-        height: root.height * root.waterFraction
-        visible: root.showWater
-        radius: tankBase.radius
-        border.width: tankBase.border.width
-        border.color: tankBase.border.color
-        gradient: Gradient {
-            GradientStop { position: 0.0; color: root.waterTop }
-            GradientStop { position: 0.72; color: root.waterBottom }
-            GradientStop { position: 1.0; color: Qt.rgba(0.08, 0.12, 0.10, 0.96) }
-        }
-    }
 
-    Rectangle {
-        id: waterline
-
-        anchors.left: parent.left
-        anchors.right: parent.right
-        y: root.waterSurfaceY - height / 2
-        height: Math.max(1, root.height * 0.035)
-        z: 6
+        anchors.fill: parent
         visible: root.showWater && root.waterFraction > 0
-        radius: height / 2
-        color: Qt.rgba(0.78, 0.98, 1.0, 0.62)
+
+        onPaint: {
+            const ctx = getContext("2d");
+            ctx.clearRect(0, 0, width, height);
+            if (!visible || width <= 0 || height <= 0) {
+                return;
+            }
+
+            root.ensureWaterPhysics();
+            const levels = root.waterLevels.length === root.waterColumnCount ? root.waterLevels : [];
+            const gradient = ctx.createLinearGradient(0, root.waterSurfaceY - root.waterWaveLimit, 0, height);
+            gradient.addColorStop(0.0, root.waterTop);
+            gradient.addColorStop(0.72, root.waterBottom);
+            gradient.addColorStop(1.0, Qt.rgba(0.08, 0.12, 0.10, 0.96));
+
+            ctx.beginPath();
+            ctx.moveTo(0, levels.length > 0 ? levels[0] : root.waterSurfaceY);
+            for (let i = 1; i < root.waterColumnCount; ++i) {
+                const x = width * i / (root.waterColumnCount - 1);
+                const y = levels.length > i ? levels[i] : root.waterSurfaceY;
+                ctx.lineTo(x, y);
+            }
+            ctx.lineTo(width, height);
+            ctx.lineTo(0, height);
+            ctx.closePath();
+            ctx.fillStyle = gradient;
+            ctx.fill();
+
+            ctx.beginPath();
+            ctx.moveTo(0, levels.length > 0 ? levels[0] : root.waterSurfaceY);
+            for (let j = 1; j < root.waterColumnCount; ++j) {
+                const sx = width * j / (root.waterColumnCount - 1);
+                const sy = levels.length > j ? levels[j] : root.waterSurfaceY;
+                ctx.lineTo(sx, sy);
+            }
+            ctx.lineWidth = Math.max(1, height * 0.018);
+            ctx.strokeStyle = Qt.rgba(0.78, 0.98, 1.0, 0.70);
+            ctx.stroke();
+        }
+
+        Component.onCompleted: {
+            root.ensureWaterPhysics();
+            requestPaint();
+        }
+        onWidthChanged: requestPaint()
+        onHeightChanged: requestPaint()
     }
 
     Repeater {
@@ -160,7 +238,7 @@ Item {
             readonly property real band: index / Math.max(1, root.compact ? 2 : 5)
 
             x: -width * 0.2 + Math.sin(swimClock.phase * 0.35 + index) * width * 0.08
-            y: root.waterSurfaceY + water.height * (0.12 + band * 0.14)
+            y: root.waterSurfaceY + root.waterDepth * (0.12 + band * 0.14)
             width: root.width * 1.4
             height: Math.max(1, root.height * 0.018)
             radius: height / 2
@@ -291,7 +369,10 @@ Item {
         interval: Math.max(16, root.frameInterval)
         repeat: true
         running: true
-        onTriggered: tick += 1 + Math.round(root.loadPulse)
+        onTriggered: {
+            tick += 1 + Math.round(root.loadPulse);
+            root.updateWaterPhysics();
+        }
     }
 
     Timer {
