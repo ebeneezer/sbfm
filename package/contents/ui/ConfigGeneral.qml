@@ -131,7 +131,22 @@ KCM.SimpleKCM {
         const apps = Object.keys(appsById).map(id => appsById[id]);
         apps.sort((left, right) => left.name.localeCompare(right.name));
 
-        appChoices = [{ id: "__custom__", name: i18n("Custom URL"), icon: "document-edit", value: "__custom__" }].concat(apps);
+        const choices = [{ id: "org.kde.plasma-systemmonitor.desktop", name: i18n("System Monitor"), icon: "utilities-system-monitor", value: cfg_launchUrlDefault }];
+        const knownValues = {};
+        knownValues[cfg_launchUrlDefault] = true;
+
+        for (let i = 0; i < apps.length; ++i) {
+            if (!knownValues[apps[i].value]) {
+                choices.push(apps[i]);
+                knownValues[apps[i].value] = true;
+            }
+        }
+
+        if (cfg_launchUrl && !knownValues[cfg_launchUrl]) {
+            choices.unshift({ id: "__configured__", name: i18n("Configured launcher"), icon: "application-x-executable", value: cfg_launchUrl });
+        }
+
+        appChoices = choices;
         syncLaunchCombo();
     }
 
@@ -144,7 +159,6 @@ KCM.SimpleKCM {
         }
 
         launchCombo.currentIndex = 0;
-        launchUrlField.text = cfg_launchUrl || cfg_launchUrlDefault;
     }
 
     function interfaceFromSensorId(sensorId) {
@@ -171,7 +185,7 @@ KCM.SimpleKCM {
         anchors.fill: parent
 
         RowLayout {
-            Kirigami.FormData.label: i18n("Click opens:")
+            Kirigami.FormData.label: i18n("Click app:")
             Layout.fillWidth: true
 
             QQC2.ComboBox {
@@ -182,12 +196,8 @@ KCM.SimpleKCM {
                 textRole: "name"
                 valueRole: "value"
                 onActivated: {
-                    if (currentValue !== "__custom__") {
-                        root.cfg_launchUrl = currentValue;
-                        root.configurationChanged();
-                    } else {
-                        launchUrlField.forceActiveFocus();
-                    }
+                    root.cfg_launchUrl = currentValue;
+                    root.configurationChanged();
                 }
             }
 
@@ -196,19 +206,6 @@ KCM.SimpleKCM {
                 display: QQC2.AbstractButton.IconOnly
                 text: i18n("Refresh applications")
                 onClicked: root.rebuildAppChoices()
-            }
-        }
-
-        QQC2.TextField {
-            id: launchUrlField
-
-            Kirigami.FormData.label: i18n("Custom URL:")
-            Layout.fillWidth: true
-            visible: launchCombo.currentIndex <= 0
-            placeholderText: root.cfg_launchUrlDefault
-            onTextEdited: {
-                root.cfg_launchUrl = text;
-                root.configurationChanged();
             }
         }
 
@@ -349,7 +346,6 @@ KCM.SimpleKCM {
 
     Component.onCompleted: {
         fpsSlider.value = cfg_framesPerSecond;
-        launchUrlField.text = cfg_launchUrl || cfg_launchUrlDefault;
         rebuildAppChoices();
         syncNetworkCombo();
     }
