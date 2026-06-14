@@ -14,6 +14,7 @@ Item {
     property int sourceWidth: 1
     property int sourceHeight: 1
     property real pixelScale: 1
+    property bool mirrored: false
 
     width: sourceWidth * pixelScale
     height: sourceHeight * pixelScale
@@ -23,6 +24,7 @@ Item {
         source: root.source
         sourceClipRect: Qt.rect(root.sourceX, root.sourceY, root.sourceWidth, root.sourceHeight)
         fillMode: Image.Stretch
+        mirror: root.mirrored
         smooth: false
         antialiasing: false
     }
