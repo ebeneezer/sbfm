@@ -29,6 +29,10 @@ PlasmoidItem {
     readonly property string weatherCondition: Plasmoid.configuration.weatherCondition || "clear"
     readonly property string weatherLocation: Plasmoid.configuration.weatherLocation || ""
     readonly property string weatherLocationLabel: Plasmoid.configuration.weatherLocationLabel || ""
+    readonly property var weatherCoordinates: parseCoordinates(weatherLocation)
+    readonly property bool weatherCoordinatesValid: weatherCoordinates !== null
+    readonly property real weatherLatitude: weatherCoordinatesValid ? weatherCoordinates.latitude : 0
+    readonly property real weatherLongitude: weatherCoordinatesValid ? weatherCoordinates.longitude : 0
     readonly property bool weatherLookupEnabled: weatherLocation.trim().length > 0
     readonly property bool liveWeatherActive: liveWeatherCondition.length > 0
     readonly property string effectiveWeatherCondition: liveWeatherActive ? liveWeatherCondition : weatherCondition
@@ -374,6 +378,9 @@ PlasmoidItem {
                 weatherCloudCover: root.effectiveWeatherCloudCover
                 weatherPrecipitation: root.effectiveWeatherPrecipitation
                 weatherSnowfall: root.effectiveWeatherSnowfall
+                solarLocationValid: root.weatherCoordinatesValid
+                solarLatitude: root.weatherLatitude
+                solarLongitude: root.weatherLongitude
                 frameInterval: root.frameInterval
             }
 

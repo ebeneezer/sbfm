@@ -24,7 +24,8 @@ Author: Dr. Michael Raus <dr.michael.raus@gmail.com>
 - Bubbles grow while rising and use a light outline for visibility.
 - The duck reacts to memory pressure and can capsize when the water level gets
   too low.
-- Day/night sky with sun, moon, and moon phase rendering.
+- Day/night sky with sun, moon, moon phase rendering, and calculated
+  sunrise/sunset times when a location is configured.
 - Live weather animation with clouds, rain, snow, fog, and thunderstorm effects.
 - Weather location lookup with city/country display and read-only latitude and
   longitude feedback.
@@ -67,6 +68,7 @@ Author: Dr. Michael Raus <dr.michael.raus@gmail.com>
 | RAM usage | Water level |
 | Swap usage | Plant height |
 | Time of day | Sky color, sun, moon |
+| Location | Sunrise/sunset calculation |
 | Moon phase | Rendered moon shape |
 | Weather | Clouds, precipitation, fog, thunder |
 

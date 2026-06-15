@@ -29,6 +29,9 @@ Item {
     property real weatherCloudCover: 0
     property real weatherPrecipitation: 0
     property real weatherSnowfall: 0
+    property bool solarLocationValid: false
+    property real solarLatitude: 0
+    property real solarLongitude: 0
     property int frameInterval: 42
     property var currentTime: new Date()
     property bool santaTestMode: false
@@ -39,7 +42,15 @@ Item {
     readonly property color waterTop: Qt.rgba(0.05, 0.22 + cpuLoad * 0.12, 0.32 + networkLoad * 0.12, 0.92)
     readonly property color waterBottom: Qt.rgba(0.02, 0.42 + networkLoad * 0.16, 0.50 + cpuLoad * 0.10, 0.96)
     readonly property int localHour: currentTime.getHours()
-    readonly property bool daytime: localHour >= 6 && localHour < 20
+    readonly property int localMinutes: currentTime.getHours() * 60 + currentTime.getMinutes()
+    readonly property var sunriseSunset: calculateSunriseSunset(currentTime, solarLatitude, solarLongitude)
+    readonly property bool calculatedDaytime: solarLocationValid
+                                               && sunriseSunset.valid
+                                               && (sunriseSunset.alwaysDay
+                                                   || (!sunriseSunset.alwaysNight
+                                                       && localMinutes >= sunriseSunset.sunrise
+                                                       && localMinutes < sunriseSunset.sunset))
+    readonly property bool daytime: solarLocationValid && sunriseSunset.valid ? calculatedDaytime : localHour >= 6 && localHour < 20
     readonly property real weatherCloudLoad: clamp(weatherCloudCover, 0, 1)
     readonly property real rainLoad: clamp(weatherPrecipitation / 2.5, 0, 1)
     readonly property real snowLoad: clamp(weatherSnowfall / 1.5, 0, 1)
@@ -108,6 +119,91 @@ Item {
         const days = (date.getTime() - knownNewMoon) / 86400000;
         const age = ((days % synodicMonth) + synodicMonth) % synodicMonth;
         return age / synodicMonth;
+    }
+
+    function degToRad(degrees) {
+        return degrees * Math.PI / 180;
+    }
+
+    function radToDeg(radians) {
+        return radians * 180 / Math.PI;
+    }
+
+    function normalizeDegrees(degrees) {
+        return ((degrees % 360) + 360) % 360;
+    }
+
+    function normalizeHours(hours) {
+        return ((hours % 24) + 24) % 24;
+    }
+
+    function dayOfYear(date) {
+        const start = new Date(date.getFullYear(), 0, 0);
+        return Math.floor((date - start) / 86400000);
+    }
+
+    function solarEventHours(date, latitude, longitude, sunrise) {
+        const zenith = 90.833;
+        const lngHour = longitude / 15;
+        const n = dayOfYear(date);
+        const t = n + ((sunrise ? 6 : 18) - lngHour) / 24;
+        const m = 0.9856 * t - 3.289;
+        const l = normalizeDegrees(m + 1.916 * Math.sin(degToRad(m))
+                                   + 0.020 * Math.sin(degToRad(2 * m)) + 282.634);
+        let rightAscension = normalizeDegrees(radToDeg(Math.atan(0.91764 * Math.tan(degToRad(l)))));
+        rightAscension += Math.floor(l / 90) * 90 - Math.floor(rightAscension / 90) * 90;
+        rightAscension /= 15;
+
+        const sinDec = 0.39782 * Math.sin(degToRad(l));
+        const cosDec = Math.cos(Math.asin(sinDec));
+        const cosH = (Math.cos(degToRad(zenith)) - sinDec * Math.sin(degToRad(latitude)))
+                     / (cosDec * Math.cos(degToRad(latitude)));
+
+        if (cosH > 1) {
+            return { valid: true, alwaysNight: true, alwaysDay: false, hours: 0 };
+        }
+        if (cosH < -1) {
+            return { valid: true, alwaysNight: false, alwaysDay: true, hours: 0 };
+        }
+
+        let h = sunrise ? 360 - radToDeg(Math.acos(cosH)) : radToDeg(Math.acos(cosH));
+        h /= 15;
+
+        const localOffsetHours = -date.getTimezoneOffset() / 60;
+        const utcHours = h + rightAscension - 0.06571 * t - 6.622 - lngHour;
+        return {
+            valid: true,
+            alwaysNight: false,
+            alwaysDay: false,
+            hours: normalizeHours(utcHours + localOffsetHours)
+        };
+    }
+
+    function calculateSunriseSunset(date, latitude, longitude) {
+        if (!Number.isFinite(latitude) || !Number.isFinite(longitude)
+                || latitude < -90 || latitude > 90 || longitude < -180 || longitude > 180) {
+            return { valid: false, sunrise: 360, sunset: 1200, alwaysNight: false, alwaysDay: false };
+        }
+
+        const sunrise = solarEventHours(date, latitude, longitude, true);
+        const sunset = solarEventHours(date, latitude, longitude, false);
+        if (!sunrise.valid || !sunset.valid) {
+            return { valid: false, sunrise: 360, sunset: 1200, alwaysNight: false, alwaysDay: false };
+        }
+        if (sunrise.alwaysNight || sunset.alwaysNight) {
+            return { valid: true, sunrise: 0, sunset: 0, alwaysNight: true, alwaysDay: false };
+        }
+        if (sunrise.alwaysDay || sunset.alwaysDay) {
+            return { valid: true, sunrise: 0, sunset: 1440, alwaysNight: false, alwaysDay: true };
+        }
+
+        return {
+            valid: true,
+            sunrise: Math.round(sunrise.hours * 60),
+            sunset: Math.round(sunset.hours * 60),
+            alwaysNight: false,
+            alwaysDay: false
+        };
     }
 
     function gregorianEasterDate(year) {
