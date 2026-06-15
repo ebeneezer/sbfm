@@ -13,7 +13,9 @@ Item {
 
     property bool compact: false
     property real cpuLoad: 0
+    property real systemLoad: 0
     property real memoryLoad: 0
+    property real swapLoad: 0
     property real networkLoad: 0
     property string downloadText: ""
     property string uploadText: ""
@@ -23,24 +25,57 @@ Item {
     property bool showDuck: true
     property bool showWeeds: true
     property string weatherCondition: "clear"
+    property real weatherCloudCover: 0
+    property real weatherPrecipitation: 0
+    property real weatherSnowfall: 0
     property int frameInterval: 42
     property var currentTime: new Date()
+    property int fishAppearanceSerial: 0
+    property bool santaTestMode: false
+    property bool easterTestMode: false
 
     readonly property real loadPulse: 0.5 + cpuLoad * 1.6 + networkLoad * 1.2
     readonly property color waterTop: Qt.rgba(0.05, 0.22 + cpuLoad * 0.12, 0.32 + networkLoad * 0.12, 0.92)
     readonly property color waterBottom: Qt.rgba(0.02, 0.42 + networkLoad * 0.16, 0.50 + cpuLoad * 0.10, 0.96)
     readonly property int localHour: currentTime.getHours()
     readonly property bool daytime: localHour >= 6 && localHour < 20
-    readonly property bool rainyWeather: weatherCondition === "rain"
-    readonly property bool cloudyWeather: rainyWeather || weatherCondition === "cloudy"
+    readonly property real weatherCloudLoad: clamp(weatherCloudCover, 0, 1)
+    readonly property real rainLoad: clamp(weatherPrecipitation / 2.5, 0, 1)
+    readonly property real snowLoad: clamp(weatherSnowfall / 1.5, 0, 1)
+    readonly property real weatherAnimationSpeed: 0.1792
+    readonly property bool thunderWeather: weatherCondition === "thunderstorm"
+    readonly property bool rainyWeather: weatherCondition === "rain" || thunderWeather
+    readonly property bool snowyWeather: weatherCondition === "snow"
+    readonly property bool foggyWeather: weatherCondition === "fog"
+    readonly property bool cloudyWeather: rainyWeather || snowyWeather || foggyWeather
+                                          || weatherCondition === "cloudy" || weatherCloudLoad >= 0.35
     readonly property bool clearWeather: !cloudyWeather
+    readonly property int cloudSpriteCount: cloudyWeather
+        ? Math.max(1, Math.min(compact ? 3 : 7, Math.round(1 + weatherCloudLoad * (compact ? 3 : 7))))
+        : 0
+    readonly property int rainDropCount: rainyWeather
+        ? Math.max(compact ? 8 : 24, Math.round((compact ? 18 : 64) * (0.35 + Math.max(rainLoad, thunderWeather ? 0.55 : 0))))
+        : 0
+    readonly property int snowFlakeCount: snowyWeather
+        ? Math.max(compact ? 7 : 22, Math.round((compact ? 16 : 56) * (0.32 + snowLoad)))
+        : 0
     readonly property real moonPhase: normalizedMoonPhase(currentTime)
     readonly property real moonIllumination: (1 - Math.cos(moonPhase * Math.PI * 2)) / 2
     readonly property int moonPhaseStep: Math.round(moonIllumination * 5)
     readonly property bool waxingMoon: moonPhase < 0.5
+    readonly property bool santaSeason: currentTime.getMonth() === 11
+                                        && currentTime.getDate() >= 17
+                                        && currentTime.getDate() <= 26
+    readonly property bool santaHourWindow: santaTestMode || (santaSeason && currentTime.getMinutes() === 0)
+    readonly property var easterDate: gregorianEasterDate(currentTime.getFullYear())
+    readonly property bool easterSeason: localDaySerial(currentTime) >= localDaySerialOffset(easterDate, -7)
+                                         && localDaySerial(currentTime) <= localDaySerialOffset(easterDate, 1)
+    readonly property bool easterHourWindow: !santaHourWindow
+                                             && (easterTestMode || (easterSeason && currentTime.getMinutes() === 0))
     readonly property int maxBubbleCount: compact ? 7 : 18
     readonly property int bubbleCount: cpuLoad < 0.02 ? 0 : Math.max(1, Math.min(maxBubbleCount, Math.ceil(cpuLoad * maxBubbleCount)))
-    readonly property int fishCount: compact ? 2 : 6
+    readonly property int maxFishCount: compact ? 20 : 40
+    readonly property int fishCount: Math.max(0, Math.min(maxFishCount, Math.floor(systemLoad)))
     readonly property real boundedMemoryLoad: clamp(memoryLoad, 0, 1)
     readonly property real waterFraction: boundedMemoryLoad
     readonly property real waterDepth: height * waterFraction
@@ -54,12 +89,43 @@ Item {
         return Math.max(low, Math.min(high, value))
     }
 
+    function nextFishAppearanceSerial() {
+        fishAppearanceSerial += 1;
+        return fishAppearanceSerial;
+    }
+
     function normalizedMoonPhase(date) {
         const synodicMonth = 29.530588853;
         const knownNewMoon = Date.UTC(2000, 0, 6, 18, 14, 0);
         const days = (date.getTime() - knownNewMoon) / 86400000;
         const age = ((days % synodicMonth) + synodicMonth) % synodicMonth;
         return age / synodicMonth;
+    }
+
+    function gregorianEasterDate(year) {
+        const a = year % 19;
+        const b = Math.floor(year / 100);
+        const c = year % 100;
+        const d = Math.floor(b / 4);
+        const e = b % 4;
+        const f = Math.floor((b + 8) / 25);
+        const g = Math.floor((b - f + 1) / 3);
+        const h = (19 * a + b - d - g + 15) % 30;
+        const i = Math.floor(c / 4);
+        const k = c % 4;
+        const l = (32 + 2 * e + 2 * i - h - k) % 7;
+        const m = Math.floor((a + 11 * h + 22 * l) / 451);
+        const month = Math.floor((h + l - 7 * m + 114) / 31) - 1;
+        const day = ((h + l - 7 * m + 114) % 31) + 1;
+        return new Date(year, month, day);
+    }
+
+    function localDaySerial(date) {
+        return Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()) / 86400000;
+    }
+
+    function localDaySerialOffset(date, offset) {
+        return localDaySerial(new Date(date.getFullYear(), date.getMonth(), date.getDate() + offset));
     }
 
     function ensureWaterPhysics() {
@@ -107,9 +173,10 @@ Item {
             levels[column] = clamp(levels[column] - waterWaveLimit * (0.45 + cpuLoad), target - waterWaveLimit, target + waterWaveLimit);
         }
 
-        if (rainyWeather && swimClock.tick % 4 === 0) {
+        if (rainyWeather && swimClock.tick % Math.max(2, Math.round(6 - Math.max(rainLoad, thunderWeather ? 0.7 : 0) * 4)) === 0) {
             const rainColumn = 1 + ((swimClock.tick * 11) % Math.max(1, waterColumnCount - 2));
-            levels[rainColumn] = clamp(levels[rainColumn] + waterWaveLimit * 0.24, target - waterWaveLimit, target + waterWaveLimit);
+            levels[rainColumn] = clamp(levels[rainColumn] + waterWaveLimit * (0.18 + Math.max(rainLoad, 0.2) * 0.24),
+                                       target - waterWaveLimit, target + waterWaveLimit);
         }
 
         waterLevels = levels;
@@ -164,7 +231,8 @@ Item {
             width: bodySize
             height: bodySize
             radius: width / 2
-            visible: root.daytime && root.clearWeather && parent.height > height * 0.8
+            visible: root.daytime && !root.rainyWeather && !root.snowyWeather && !root.foggyWeather
+                     && root.weatherCloudLoad < 0.82 && parent.height > height * 0.8
             color: Qt.rgba(1.0, 0.86, 0.18, 0.95)
             border.width: Math.max(1, Math.round(Kirigami.Units.devicePixelRatio))
             border.color: Qt.rgba(1.0, 1.0, 0.76, 0.78)
@@ -179,30 +247,32 @@ Item {
             y: Math.max(1, parent.height * 0.16)
             width: bodySize
             height: bodySize
-            visible: !root.daytime && !root.cloudyWeather && parent.height > height * 0.8
+            visible: !root.daytime && !root.rainyWeather && !root.snowyWeather && !root.foggyWeather
+                     && root.weatherCloudLoad < 0.55 && parent.height > height * 0.8
             phaseStep: root.moonPhaseStep
             waxing: root.waxingMoon
             shadowColor: Qt.rgba(0.04, 0.03, 0.16, 0.98)
         }
 
         Repeater {
-            model: root.cloudyWeather ? (root.compact ? 2 : 5) : 0
+            model: root.cloudSpriteCount
 
             Item {
-                readonly property real cloudWidth: Math.max(10, root.width * (0.38 + (index % 2) * 0.12))
-                readonly property real cloudHeight: Math.max(4, root.height * (0.10 + (index % 3) * 0.018))
+                readonly property real cloudWidth: Math.max(10, root.width * (0.30 + root.weatherCloudLoad * 0.18 + (index % 2) * 0.10))
+                readonly property real cloudHeight: Math.max(4, root.height * (0.085 + root.weatherCloudLoad * 0.05 + (index % 3) * 0.014))
                 readonly property real track: sky.width + cloudWidth * 2
-                readonly property real progress: (swimClock.phase * (0.006 + index * 0.0015) + index * 0.37) % 1
+                readonly property real progress: (swimClock.phase * root.weatherAnimationSpeed
+                                                 * (0.004 + index * 0.0012 + root.weatherCloudLoad * 0.002) + index * 0.37) % 1
                 readonly property color cloudColor: root.daytime
-                    ? Qt.rgba(0.92, 0.96, 1.0, root.rainyWeather ? 0.72 : 0.62)
-                    : Qt.rgba(0.30, 0.32, 0.48, root.rainyWeather ? 0.78 : 0.58)
+                    ? Qt.rgba(0.92 - root.rainLoad * 0.12, 0.96 - root.rainLoad * 0.10, 1.0, 0.45 + root.weatherCloudLoad * 0.35)
+                    : Qt.rgba(0.30, 0.32, 0.48 + root.weatherCloudLoad * 0.06, 0.46 + root.weatherCloudLoad * 0.36)
 
                 x: progress * track - cloudWidth
                 y: Math.max(1, sky.height * (0.12 + (index % 3) * 0.17))
                 width: cloudWidth
                 height: cloudHeight
                 visible: sky.height > height
-                opacity: root.rainyWeather ? 0.92 : 0.78
+                opacity: root.foggyWeather ? 0.55 : root.thunderWeather ? 0.96 : 0.68 + root.weatherCloudLoad * 0.22
 
                 Rectangle {
                     x: parent.width * 0.02
@@ -288,19 +358,89 @@ Item {
     }
 
     Repeater {
-        model: root.rainyWeather ? (root.compact ? 18 : 60) : 0
+        model: root.foggyWeather ? (root.compact ? 3 : 7) : 0
+
+        Rectangle {
+            readonly property real travel: (swimClock.phase * root.weatherAnimationSpeed
+                                           * (0.018 + index * 0.002) + index * 0.21) % 1
+
+            x: -width * 0.25 + travel * root.width * 0.35
+            y: Math.max(0, root.waterSurfaceY * (0.12 + index * 0.13))
+            width: root.width * 1.5
+            height: Math.max(2, root.height * 0.045)
+            radius: height / 2
+            color: root.daytime ? Qt.rgba(0.92, 0.96, 0.98, 0.22) : Qt.rgba(0.58, 0.62, 0.72, 0.24)
+            visible: y < root.waterSurfaceY
+        }
+    }
+
+    Canvas {
+        id: lightning
+
+        anchors.fill: parent
+        visible: root.thunderWeather && sky.height > 4
+                 && Math.floor(swimClock.phase * root.weatherAnimationSpeed * 1.8) % 11 === 0
+        opacity: visible ? 0.82 : 0
+
+        onPaint: {
+            const ctx = getContext("2d");
+            ctx.clearRect(0, 0, width, height);
+            if (!visible) {
+                return;
+            }
+            const baseX = width * (0.62 + (Math.floor(swimClock.phase) % 3) * 0.08);
+            const topY = Math.max(1, root.waterSurfaceY * 0.16);
+            ctx.beginPath();
+            ctx.moveTo(baseX, topY);
+            ctx.lineTo(baseX - width * 0.07, topY + root.height * 0.12);
+            ctx.lineTo(baseX + width * 0.02, topY + root.height * 0.12);
+            ctx.lineTo(baseX - width * 0.06, topY + root.height * 0.26);
+            ctx.lineWidth = Math.max(1, root.width * 0.018);
+            ctx.strokeStyle = Qt.rgba(1.0, 0.95, 0.35, 0.92);
+            ctx.stroke();
+        }
+
+        onVisibleChanged: requestPaint()
+    }
+
+    Repeater {
+        model: root.rainDropCount
 
         Rectangle {
             readonly property real lane: ((index * 37) % 100) / 100
-            readonly property real travel: (swimClock.phase * (0.18 + (index % 5) * 0.022) + index * 0.071) % 1
+            readonly property real travel: (swimClock.phase * root.weatherAnimationSpeed
+                                           * (0.16 + root.rainLoad * 0.08 + (index % 5) * 0.020) + index * 0.071) % 1
 
             x: root.width * lane
             y: -height + travel * (root.height + height)
             width: Math.max(1, root.width * 0.018)
-            height: Math.max(4, root.height * 0.16)
+            height: Math.max(4, root.height * (0.13 + root.rainLoad * 0.06))
             radius: width / 2
-            color: root.daytime ? Qt.rgba(0.80, 0.90, 1.0, 0.54) : Qt.rgba(0.62, 0.76, 1.0, 0.50)
+            color: root.thunderWeather
+                ? Qt.rgba(0.74, 0.82, 1.0, 0.66)
+                : root.daytime ? Qt.rgba(0.80, 0.90, 1.0, 0.42 + root.rainLoad * 0.22)
+                               : Qt.rgba(0.62, 0.76, 1.0, 0.42 + root.rainLoad * 0.18)
             rotation: 8
+            visible: root.showWater || root.waterFraction < 0.98
+        }
+    }
+
+    Repeater {
+        model: root.snowFlakeCount
+
+        Rectangle {
+            readonly property real lane: ((index * 31) % 100) / 100
+            readonly property real drift: Math.sin(swimClock.phase * root.weatherAnimationSpeed * 0.52 + index) * root.width * 0.045
+            readonly property real travel: (swimClock.phase * root.weatherAnimationSpeed
+                                           * (0.035 + (index % 5) * 0.006) + index * 0.083) % 1
+            readonly property real flakeSize: Math.max(1.5, root.width * (0.018 + (index % 3) * 0.006))
+
+            x: root.width * lane + drift
+            y: -height + travel * (root.height + height)
+            width: flakeSize
+            height: flakeSize
+            radius: width / 2
+            color: root.daytime ? Qt.rgba(1.0, 1.0, 1.0, 0.78) : Qt.rgba(0.82, 0.88, 1.0, 0.70)
             visible: root.showWater || root.waterFraction < 0.98
         }
     }
@@ -335,7 +475,7 @@ Item {
     }
 
     Repeater {
-        model: root.showFish ? root.fishCount : 0
+        model: root.maxFishCount
 
         Fish {
             aquariumWidth: root.width
@@ -345,6 +485,8 @@ Item {
             load: root.networkLoad
             phase: swimClock.phase
             compact: root.compact
+            wanted: root.showFish && index < root.fishCount
+            appearanceSerialProvider: root.nextFishAppearanceSerial
         }
     }
 
@@ -357,14 +499,34 @@ Item {
         phase: swimClock.phase
         compact: root.compact
         z: 5
-        visible: root.showDuck
+        visible: root.showDuck && !root.santaHourWindow && !root.easterHourWindow
+    }
+
+    DrowningSanta {
+        aquariumWidth: root.width
+        aquariumHeight: root.height
+        waterSurfaceY: root.waterSurfaceY
+        phase: swimClock.phase
+        compact: root.compact
+        z: 5
+        visible: root.showDuck && root.santaHourWindow
+    }
+
+    DrowningEasterBunny {
+        aquariumWidth: root.width
+        aquariumHeight: root.height
+        waterSurfaceY: root.waterSurfaceY
+        phase: swimClock.phase
+        compact: root.compact
+        z: 5
+        visible: root.showDuck && root.easterHourWindow
     }
 
     Item {
         anchors.left: parent.left
         anchors.right: parent.right
         anchors.bottom: parent.bottom
-        height: Math.max(2, root.height * (0.08 + root.memoryLoad * 0.08))
+        height: Math.max(2, root.height * (0.055 + root.swapLoad * 0.30))
         visible: root.showWeeds
 
         Rectangle {
@@ -376,10 +538,13 @@ Item {
         }
 
         Repeater {
-            model: 8
+            model: 4
 
             OriginalSprite {
                 readonly property int frame: Math.floor(swimClock.phase * 0.45 + index) % 8
+                readonly property real heightScale: [0.62, 0.78, 0.94, 0.70][index % 4]
+                readonly property real swapGrowth: 1 + root.swapLoad * 3.2
+                readonly property real lane: [0.01, 0.28, 0.55, 0.81][index % 4]
                 readonly property var sprite: [
                     [0, 120],
                     [18, 120],
@@ -396,8 +561,8 @@ Item {
                 sourceY: sprite[1]
                 sourceWidth: 17
                 sourceHeight: 12
-                pixelScale: Math.max(1, root.height / 48)
-                x: parent.width * ((index + 0.3) / 8)
+                pixelScale: Math.max(1, root.height / 58) * heightScale * swapGrowth
+                x: Math.max(0, Math.min(parent.width - width, parent.width * lane))
                 y: parent.height - height
                 transform: Rotation {
                     origin.x: width / 2

@@ -23,7 +23,7 @@ OriginalSprite {
     readonly property real leg: swimmingRight ? travel : travel - 1
     readonly property int animationStep: Math.floor(wingProgress) % 16
     readonly property int frame: animationStep < 4 ? 0 : animationStep < 8 ? 1 : animationStep < 12 ? 2 : 1
-    readonly property real duckWidth: Math.max(14.4, aquariumHeight * (compact ? 0.368 : 0.176))
+    readonly property real duckWidth: Math.max(12.35, aquariumHeight * (compact ? 0.31464 : 0.15048))
     readonly property real bob: Math.sin(wingProgress * 0.35) * aquariumHeight * 0.018
     readonly property real waterlineSpriteOffset: 14 / 17
     readonly property real normalFloatingY: waterSurfaceY - height * waterlineSpriteOffset + bob

@@ -8,7 +8,7 @@
   <group name="General">
     <entry name="launchUrl" type="String">
       <label>KDE application or URL to open when the widget is clicked.</label>
-      <default>applications:org.kde.plasma-systemmonitor.desktop</default>
+      <default>org.kde.plasma-systemmonitor.desktop</default>
     </entry>
     <entry name="showWater" type="Bool">
       <label>Show the aquarium water background.</label>
@@ -36,6 +36,10 @@
     </entry>
     <entry name="weatherLocation" type="String">
       <label>Location used for weather lookup.</label>
+      <default></default>
+    </entry>
+    <entry name="weatherLocationLabel" type="String">
+      <label>Display label for the selected weather location.</label>
       <default></default>
     </entry>
     <entry name="framesPerSecond" type="Int">
