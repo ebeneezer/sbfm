@@ -142,7 +142,6 @@ Item {
         anchors.right: parent.right
         anchors.top: parent.top
         height: root.waterSurfaceY
-        radius: tankBase.radius
         visible: height > 0
         gradient: Gradient {
             GradientStop {

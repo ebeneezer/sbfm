@@ -22,7 +22,8 @@ OriginalSprite {
     readonly property real lane: ((seed * 37 + cycle * 53) % 100) / 100
     readonly property int frame: Math.max(0, Math.min(4, Math.floor(travel * 5)))
     readonly property real waterDepth: Math.max(1, aquariumHeight - waterSurfaceY)
-    readonly property real ringSize: Math.max(3, Math.max(width, height) + 1 + travel * 3)
+    readonly property real growthScale: 1 - travel * 0.30
+    readonly property real ringSize: Math.max(3, Math.max(width, height) + 1 + travel * 2.1)
     readonly property real sway: Math.sin(phase * 1.2 + seed + cycle * 0.67) * aquariumWidth * (0.012 + travel * 0.018)
     readonly property var sprite: [
         [33, 196, 1, 1],
@@ -37,7 +38,7 @@ OriginalSprite {
     sourceY: sprite[1]
     sourceWidth: sprite[2]
     sourceHeight: sprite[3]
-    pixelScale: Math.max(1, aquariumHeight / 38) * (0.75 + travel * 0.70 + load * 0.45)
+    pixelScale: Math.max(1, aquariumHeight / 38) * (0.75 + travel * 0.70 + load * 0.45) * growthScale
     x: Math.max(0, Math.min(aquariumWidth - width, aquariumWidth * (0.08 + lane * 0.82) + sway))
     y: waterSurfaceY + waterDepth * (0.92 - travel * 0.90)
     z: 4
