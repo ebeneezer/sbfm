@@ -16,35 +16,35 @@ Item {
     property real swimProgress: 0
     property bool swimAnimationRunning: true
 
-    readonly property real santaSize: Math.max(16, aquariumHeight * (compact ? 0.56 : 0.34))
-    readonly property real bob: Math.sin(phase * 0.9) * santaSize * 0.035
-    readonly property real sway: Math.sin(phase * 0.58) * santaSize * 0.065
-    readonly property real rockAngle: Math.sin(phase * 0.52) * 3.2
+    readonly property real pumpkinSize: Math.max(16, aquariumHeight * (compact ? 0.464 : 0.28))
+    readonly property real bob: Math.sin(phase * 0.82) * pumpkinSize * 0.032
+    readonly property real sway: Math.sin(phase * 0.53) * pumpkinSize * 0.060
+    readonly property real rockAngle: Math.sin(phase * 0.50) * 3.0
     readonly property real travel: swimProgress
     readonly property bool swimmingRight: travel < 1
     readonly property real swimLeg: swimmingRight ? travel : travel - 1
-    readonly property real leftOutX: -width - santaSize * 0.12
-    readonly property real rightOutX: aquariumWidth + santaSize * 0.12
+    readonly property real leftOutX: -width - pumpkinSize * 0.12
+    readonly property real rightOutX: aquariumWidth + pumpkinSize * 0.12
     readonly property real span: rightOutX - leftOutX
     readonly property real swimX: swimmingRight ? leftOutX + swimLeg * span : rightOutX - swimLeg * span
-    readonly property int frame: Math.floor(phase * 0.705) % 4
-    readonly property real waterlineRatio: 0.46
+    readonly property int frame: Math.floor(phase * 0.285) % 4
+    readonly property real waterlineRatio: 0.52
     readonly property real waterlineInItem: Math.max(0, Math.min(height, waterSurfaceY - y))
     readonly property var normalFrames: [
-        Qt.resolvedUrl("../images/drowning-santa-1.png"),
-        Qt.resolvedUrl("../images/drowning-santa-2.png"),
-        Qt.resolvedUrl("../images/drowning-santa-3.png"),
-        Qt.resolvedUrl("../images/drowning-santa-4.png")
+        Qt.resolvedUrl("../images/drowning-halloween-pumpkin-1.png"),
+        Qt.resolvedUrl("../images/drowning-halloween-pumpkin-2.png"),
+        Qt.resolvedUrl("../images/drowning-halloween-pumpkin-3.png"),
+        Qt.resolvedUrl("../images/drowning-halloween-pumpkin-4.png")
     ]
     readonly property var underwaterFrames: [
-        Qt.resolvedUrl("../images/drowning-santa-1-underwater.png"),
-        Qt.resolvedUrl("../images/drowning-santa-2-underwater.png"),
-        Qt.resolvedUrl("../images/drowning-santa-3-underwater.png"),
-        Qt.resolvedUrl("../images/drowning-santa-4-underwater.png")
+        Qt.resolvedUrl("../images/drowning-halloween-pumpkin-1-underwater.png"),
+        Qt.resolvedUrl("../images/drowning-halloween-pumpkin-2-underwater.png"),
+        Qt.resolvedUrl("../images/drowning-halloween-pumpkin-3-underwater.png"),
+        Qt.resolvedUrl("../images/drowning-halloween-pumpkin-4-underwater.png")
     ]
 
-    width: santaSize
-    height: santaSize
+    width: pumpkinSize
+    height: pumpkinSize
     x: swimX + sway
     y: Math.max(0, Math.min(aquariumHeight - height, waterSurfaceY - height * waterlineRatio + bob))
     opacity: 0.96
@@ -64,8 +64,6 @@ Item {
     }
 
     Item {
-        id: aboveWaterClip
-
         x: 0
         y: 0
         width: root.width
@@ -77,6 +75,7 @@ Item {
             height: root.height
             source: root.normalFrames[root.frame]
             fillMode: Image.PreserveAspectFit
+            mirror: root.swimmingRight
             smooth: true
             mipmap: true
             cache: true
@@ -98,6 +97,7 @@ Item {
             height: root.height
             source: root.underwaterFrames[root.frame]
             fillMode: Image.PreserveAspectFit
+            mirror: root.swimmingRight
             smooth: true
             mipmap: true
             cache: true

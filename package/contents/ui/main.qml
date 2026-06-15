@@ -17,14 +17,15 @@ PlasmoidItem {
     id: root
 
     readonly property real cpuLoad: percentSensorToLoad(cpuSensor.value)
-    readonly property real systemLoad: sensorNumber(loadAverageSensor.value) + 4
-    readonly property real memoryLoad: clamp(percentSensorToLoad(memorySensor.value) + 0.40, 0, 1)
+    readonly property real systemLoad: sensorNumber(loadAverageSensor.value)
+    readonly property real memoryLoad: percentSensorToLoad(memorySensor.value)
     readonly property real swapLoad: percentSensorPercentToLoad(swapSensor.value)
     readonly property real rawNetworkLoad: clamp((downloadSensor.value + uploadSensor.value) / 10485760, 0, 1)
     property real smoothedNetworkLoad: 0
     readonly property real networkLoad: smoothedNetworkLoad
     readonly property int frameInterval: Math.round(1000 / clamp(Plasmoid.configuration.framesPerSecond || 24, 1, 60))
     readonly property string networkInterface: Plasmoid.configuration.networkInterface || "all"
+    readonly property string seasonMode: Plasmoid.configuration.seasonMode || "auto"
     readonly property string weatherCondition: Plasmoid.configuration.weatherCondition || "clear"
     readonly property string weatherLocation: Plasmoid.configuration.weatherLocation || ""
     readonly property string weatherLocationLabel: Plasmoid.configuration.weatherLocationLabel || ""
@@ -368,6 +369,7 @@ PlasmoidItem {
                 showFish: root.enabledByDefault(Plasmoid.configuration.showFish)
                 showDuck: root.enabledByDefault(Plasmoid.configuration.showDuck)
                 showWeeds: root.enabledByDefault(Plasmoid.configuration.showWeeds)
+                seasonMode: root.seasonMode
                 weatherCondition: root.effectiveWeatherCondition
                 weatherCloudCover: root.effectiveWeatherCloudCover
                 weatherPrecipitation: root.effectiveWeatherPrecipitation

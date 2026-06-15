@@ -16,12 +16,14 @@ Item {
     property real pixelScale: 1
     property bool mirrored: false
     property bool flipped: false
+    property bool spriteVisible: true
 
     width: sourceWidth * pixelScale
     height: sourceHeight * pixelScale
 
     Image {
         anchors.fill: parent
+        visible: root.spriteVisible
         source: root.source
         sourceClipRect: Qt.rect(root.sourceX, root.sourceY, root.sourceWidth, root.sourceHeight)
         fillMode: Image.Stretch

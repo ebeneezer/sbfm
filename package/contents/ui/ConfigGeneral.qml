@@ -28,6 +28,7 @@ KCM.SimpleKCM {
     property string cfg_weatherCondition: "clear"
     property string cfg_weatherLocation: cfg_weatherLocationDefault
     property string cfg_weatherLocationLabel: cfg_weatherLocationLabelDefault
+    property string cfg_seasonMode: "auto"
     property int cfg_framesPerSecond: 24
     property string cfg_networkInterface: "all"
     property string cfg_launchUrlDefault: "org.kde.plasma-systemmonitor.desktop"
@@ -39,6 +40,7 @@ KCM.SimpleKCM {
     property string cfg_weatherConditionDefault: "clear"
     property string cfg_weatherLocationDefault: ""
     property string cfg_weatherLocationLabelDefault: ""
+    property string cfg_seasonModeDefault: "auto"
     property int cfg_framesPerSecondDefault: 24
     property string cfg_networkInterfaceDefault: "all"
     property var appChoices: []
@@ -56,6 +58,12 @@ KCM.SimpleKCM {
         { text: i18n("Snow"), value: "snow" },
         { text: i18n("Fog"), value: "fog" },
         { text: i18n("Thunderstorm"), value: "thunderstorm" }
+    ]
+    property var seasonChoices: [
+        { text: i18n("Auto"), value: "auto" },
+        { text: i18n("Xmas"), value: "xmas" },
+        { text: i18n("Eastern"), value: "eastern" },
+        { text: i18n("Halloween"), value: "halloween" }
     ]
 
     signal configurationChanged
@@ -125,6 +133,16 @@ KCM.SimpleKCM {
             }
         }
         weatherConditionCombo.currentIndex = 0;
+    }
+
+    function syncSeasonCombo() {
+        for (let row = 0; row < seasonChoices.length; ++row) {
+            if (seasonChoices[row].value === cfg_seasonMode) {
+                seasonModeCombo.currentIndex = row;
+                return;
+            }
+        }
+        seasonModeCombo.currentIndex = 0;
     }
 
     function coordinatesValue(latitude, longitude) {
@@ -403,6 +421,20 @@ KCM.SimpleKCM {
             }
         }
 
+        QQC2.ComboBox {
+            id: seasonModeCombo
+
+            Kirigami.FormData.label: i18n("Season:")
+            Layout.fillWidth: true
+            model: root.seasonChoices
+            textRole: "text"
+            valueRole: "value"
+            onActivated: {
+                root.cfg_seasonMode = currentValue;
+                root.configurationChanged();
+            }
+        }
+
         RowLayout {
             Kirigami.FormData.label: i18n("Location:")
             Layout.fillWidth: true
@@ -580,6 +612,7 @@ KCM.SimpleKCM {
             ? i18n("Ready to search: %1", weatherLocationField.text.trim())
             : i18n("No location configured");
         syncWeatherCombo();
+        syncSeasonCombo();
         rebuildNetworkInterfaces();
         syncLaunchCombo();
         initialized = true;
@@ -590,6 +623,7 @@ KCM.SimpleKCM {
 
     onCfg_launchUrlChanged: syncLaunchCombo()
     onCfg_weatherConditionChanged: syncWeatherCombo()
+    onCfg_seasonModeChanged: syncSeasonCombo()
     onCfg_weatherLocationChanged: {
         syncLocationField();
         syncLocationPreviewFromConfig();

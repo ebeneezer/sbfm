@@ -42,6 +42,10 @@
       <label>Display label for the selected weather location.</label>
       <default></default>
     </entry>
+    <entry name="seasonMode" type="String">
+      <label>Seasonal character override.</label>
+      <default>auto</default>
+    </entry>
     <entry name="framesPerSecond" type="Int">
       <label>Animation frame rate.</label>
       <default>24</default>

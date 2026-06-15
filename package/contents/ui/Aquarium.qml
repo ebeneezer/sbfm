@@ -24,15 +24,16 @@ Item {
     property bool showFish: true
     property bool showDuck: true
     property bool showWeeds: true
+    property string seasonMode: "auto"
     property string weatherCondition: "clear"
     property real weatherCloudCover: 0
     property real weatherPrecipitation: 0
     property real weatherSnowfall: 0
     property int frameInterval: 42
     property var currentTime: new Date()
-    property int fishAppearanceSerial: 0
     property bool santaTestMode: false
     property bool easterTestMode: false
+    property bool cakeTestMode: false
 
     readonly property real loadPulse: 0.5 + cpuLoad * 1.6 + networkLoad * 1.2
     readonly property color waterTop: Qt.rgba(0.05, 0.22 + cpuLoad * 0.12, 0.32 + networkLoad * 0.12, 0.92)
@@ -66,16 +67,28 @@ Item {
     readonly property bool santaSeason: currentTime.getMonth() === 11
                                         && currentTime.getDate() >= 17
                                         && currentTime.getDate() <= 26
-    readonly property bool santaHourWindow: santaTestMode || (santaSeason && currentTime.getMinutes() === 0)
+    readonly property bool cakeSeason: currentTime.getMonth() === 11
+                                       && currentTime.getDate() === 10
+    readonly property bool halloweenSeason: currentTime.getMonth() === 9
+                                             && currentTime.getDate() >= 24
+                                             && currentTime.getDate() <= 31
+    readonly property bool forceSeason: seasonMode !== "auto" && !cakeTestMode
+    readonly property bool santaHourWindow: !cakeTestMode && (seasonMode === "xmas" || (!forceSeason && (santaTestMode || (santaSeason && currentTime.getMinutes() === 0))))
     readonly property var easterDate: gregorianEasterDate(currentTime.getFullYear())
     readonly property bool easterSeason: localDaySerial(currentTime) >= localDaySerialOffset(easterDate, -7)
                                          && localDaySerial(currentTime) <= localDaySerialOffset(easterDate, 1)
     readonly property bool easterHourWindow: !santaHourWindow
-                                             && (easterTestMode || (easterSeason && currentTime.getMinutes() === 0))
-    readonly property int maxBubbleCount: compact ? 7 : 18
+                                             && !cakeTestMode
+                                             && (seasonMode === "eastern" || (!forceSeason && (easterTestMode || (easterSeason && currentTime.getMinutes() === 0))))
+    readonly property bool halloweenHourWindow: !santaHourWindow && !easterHourWindow
+                                                && !cakeTestMode
+                                                && (seasonMode === "halloween" || (!forceSeason && halloweenSeason && currentTime.getMinutes() === 0))
+    readonly property bool cakeDayWindow: !santaHourWindow && !easterHourWindow && !halloweenHourWindow
+                                          && (cakeTestMode || (!forceSeason && cakeSeason))
+    readonly property int maxBubbleCount: 25
     readonly property int bubbleCount: cpuLoad < 0.02 ? 0 : Math.max(1, Math.min(maxBubbleCount, Math.ceil(cpuLoad * maxBubbleCount)))
     readonly property int maxFishCount: compact ? 20 : 40
-    readonly property int fishCount: Math.max(0, Math.min(maxFishCount, Math.floor(systemLoad)))
+    readonly property int fishCount: Math.max(0, Math.min(maxFishCount, Math.round(systemLoad)))
     readonly property real boundedMemoryLoad: clamp(memoryLoad, 0, 1)
     readonly property real waterFraction: boundedMemoryLoad
     readonly property real waterDepth: height * waterFraction
@@ -87,11 +100,6 @@ Item {
 
     function clamp(value, low, high) {
         return Math.max(low, Math.min(high, value))
-    }
-
-    function nextFishAppearanceSerial() {
-        fishAppearanceSerial += 1;
-        return fishAppearanceSerial;
     }
 
     function normalizedMoonPhase(date) {
@@ -168,7 +176,7 @@ Item {
             levels[j] = clamp(levels[j] + velocities[j], target - waterWaveLimit, target + waterWaveLimit);
         }
 
-        if (showBubbles && bubbleCount > 0 && swimClock.tick % Math.max(3, Math.round(18 - cpuLoad * 14)) === 0) {
+        if (showBubbles && bubbleCount > 0 && swimClock.tick % Math.max(2, Math.round(14 - cpuLoad * 12)) === 0) {
             const column = 1 + ((swimClock.tick * 7) % Math.max(1, waterColumnCount - 2));
             levels[column] = clamp(levels[column] - waterWaveLimit * (0.45 + cpuLoad), target - waterWaveLimit, target + waterWaveLimit);
         }
@@ -304,6 +312,103 @@ Item {
         }
     }
 
+    Item {
+        id: skyWeatherLayer
+
+        anchors.left: parent.left
+        anchors.right: parent.right
+        anchors.top: parent.top
+        height: root.waterSurfaceY
+        visible: height > 0
+        clip: true
+
+        Repeater {
+            model: root.foggyWeather ? (root.compact ? 3 : 7) : 0
+
+            Rectangle {
+                readonly property real travel: (swimClock.phase * root.weatherAnimationSpeed
+                                               * (0.018 + index * 0.002) + index * 0.21) % 1
+
+                x: -width * 0.25 + travel * skyWeatherLayer.width * 0.35
+                y: Math.max(0, skyWeatherLayer.height * (0.12 + index * 0.13))
+                width: skyWeatherLayer.width * 1.5
+                height: Math.max(2, root.height * 0.045)
+                radius: height / 2
+                color: root.daytime ? Qt.rgba(0.92, 0.96, 0.98, 0.22) : Qt.rgba(0.58, 0.62, 0.72, 0.24)
+                visible: y < skyWeatherLayer.height
+            }
+        }
+
+        Canvas {
+            id: lightning
+
+            anchors.fill: parent
+            visible: root.thunderWeather && skyWeatherLayer.height > 4
+                     && Math.floor(swimClock.phase * root.weatherAnimationSpeed * 1.8) % 11 === 0
+            opacity: visible ? 0.82 : 0
+
+            onPaint: {
+                const ctx = getContext("2d");
+                ctx.clearRect(0, 0, width, height);
+                if (!visible) {
+                    return;
+                }
+                const baseX = width * (0.62 + (Math.floor(swimClock.phase) % 3) * 0.08);
+                const topY = Math.max(1, height * 0.16);
+                ctx.beginPath();
+                ctx.moveTo(baseX, topY);
+                ctx.lineTo(baseX - width * 0.07, topY + height * 0.28);
+                ctx.lineTo(baseX + width * 0.02, topY + height * 0.28);
+                ctx.lineTo(baseX - width * 0.06, topY + height * 0.62);
+                ctx.lineWidth = Math.max(1, root.width * 0.018);
+                ctx.strokeStyle = Qt.rgba(1.0, 0.95, 0.35, 0.92);
+                ctx.stroke();
+            }
+
+            onVisibleChanged: requestPaint()
+        }
+
+        Repeater {
+            model: root.rainDropCount
+
+            Rectangle {
+                readonly property real lane: ((index * 37) % 100) / 100
+                readonly property real travel: (swimClock.phase * root.weatherAnimationSpeed
+                                               * (0.16 + root.rainLoad * 0.08 + (index % 5) * 0.020) + index * 0.071) % 1
+
+                x: skyWeatherLayer.width * lane
+                y: -height + travel * (skyWeatherLayer.height + height)
+                width: Math.max(1, root.width * 0.018)
+                height: Math.max(4, root.height * (0.13 + root.rainLoad * 0.06))
+                radius: width / 2
+                color: root.thunderWeather
+                    ? Qt.rgba(0.74, 0.82, 1.0, 0.66)
+                    : root.daytime ? Qt.rgba(0.80, 0.90, 1.0, 0.42 + root.rainLoad * 0.22)
+                                   : Qt.rgba(0.62, 0.76, 1.0, 0.42 + root.rainLoad * 0.18)
+                rotation: 8
+            }
+        }
+
+        Repeater {
+            model: root.snowFlakeCount
+
+            Rectangle {
+                readonly property real lane: ((index * 31) % 100) / 100
+                readonly property real drift: Math.sin(swimClock.phase * root.weatherAnimationSpeed * 0.52 + index) * root.width * 0.045
+                readonly property real travel: (swimClock.phase * root.weatherAnimationSpeed
+                                               * (0.035 + (index % 5) * 0.006) + index * 0.083) % 1
+                readonly property real flakeSize: Math.max(1.5, root.width * (0.018 + (index % 3) * 0.006))
+
+                x: skyWeatherLayer.width * lane + drift
+                y: -height + travel * (skyWeatherLayer.height + height)
+                width: flakeSize
+                height: flakeSize
+                radius: width / 2
+                color: root.daytime ? Qt.rgba(1.0, 1.0, 1.0, 0.78) : Qt.rgba(0.82, 0.88, 1.0, 0.70)
+            }
+        }
+    }
+
     Canvas {
         id: water
 
@@ -358,94 +463,6 @@ Item {
     }
 
     Repeater {
-        model: root.foggyWeather ? (root.compact ? 3 : 7) : 0
-
-        Rectangle {
-            readonly property real travel: (swimClock.phase * root.weatherAnimationSpeed
-                                           * (0.018 + index * 0.002) + index * 0.21) % 1
-
-            x: -width * 0.25 + travel * root.width * 0.35
-            y: Math.max(0, root.waterSurfaceY * (0.12 + index * 0.13))
-            width: root.width * 1.5
-            height: Math.max(2, root.height * 0.045)
-            radius: height / 2
-            color: root.daytime ? Qt.rgba(0.92, 0.96, 0.98, 0.22) : Qt.rgba(0.58, 0.62, 0.72, 0.24)
-            visible: y < root.waterSurfaceY
-        }
-    }
-
-    Canvas {
-        id: lightning
-
-        anchors.fill: parent
-        visible: root.thunderWeather && sky.height > 4
-                 && Math.floor(swimClock.phase * root.weatherAnimationSpeed * 1.8) % 11 === 0
-        opacity: visible ? 0.82 : 0
-
-        onPaint: {
-            const ctx = getContext("2d");
-            ctx.clearRect(0, 0, width, height);
-            if (!visible) {
-                return;
-            }
-            const baseX = width * (0.62 + (Math.floor(swimClock.phase) % 3) * 0.08);
-            const topY = Math.max(1, root.waterSurfaceY * 0.16);
-            ctx.beginPath();
-            ctx.moveTo(baseX, topY);
-            ctx.lineTo(baseX - width * 0.07, topY + root.height * 0.12);
-            ctx.lineTo(baseX + width * 0.02, topY + root.height * 0.12);
-            ctx.lineTo(baseX - width * 0.06, topY + root.height * 0.26);
-            ctx.lineWidth = Math.max(1, root.width * 0.018);
-            ctx.strokeStyle = Qt.rgba(1.0, 0.95, 0.35, 0.92);
-            ctx.stroke();
-        }
-
-        onVisibleChanged: requestPaint()
-    }
-
-    Repeater {
-        model: root.rainDropCount
-
-        Rectangle {
-            readonly property real lane: ((index * 37) % 100) / 100
-            readonly property real travel: (swimClock.phase * root.weatherAnimationSpeed
-                                           * (0.16 + root.rainLoad * 0.08 + (index % 5) * 0.020) + index * 0.071) % 1
-
-            x: root.width * lane
-            y: -height + travel * (root.height + height)
-            width: Math.max(1, root.width * 0.018)
-            height: Math.max(4, root.height * (0.13 + root.rainLoad * 0.06))
-            radius: width / 2
-            color: root.thunderWeather
-                ? Qt.rgba(0.74, 0.82, 1.0, 0.66)
-                : root.daytime ? Qt.rgba(0.80, 0.90, 1.0, 0.42 + root.rainLoad * 0.22)
-                               : Qt.rgba(0.62, 0.76, 1.0, 0.42 + root.rainLoad * 0.18)
-            rotation: 8
-            visible: root.showWater || root.waterFraction < 0.98
-        }
-    }
-
-    Repeater {
-        model: root.snowFlakeCount
-
-        Rectangle {
-            readonly property real lane: ((index * 31) % 100) / 100
-            readonly property real drift: Math.sin(swimClock.phase * root.weatherAnimationSpeed * 0.52 + index) * root.width * 0.045
-            readonly property real travel: (swimClock.phase * root.weatherAnimationSpeed
-                                           * (0.035 + (index % 5) * 0.006) + index * 0.083) % 1
-            readonly property real flakeSize: Math.max(1.5, root.width * (0.018 + (index % 3) * 0.006))
-
-            x: root.width * lane + drift
-            y: -height + travel * (root.height + height)
-            width: flakeSize
-            height: flakeSize
-            radius: width / 2
-            color: root.daytime ? Qt.rgba(1.0, 1.0, 1.0, 0.78) : Qt.rgba(0.82, 0.88, 1.0, 0.70)
-            visible: root.showWater || root.waterFraction < 0.98
-        }
-    }
-
-    Repeater {
         model: root.compact ? 2 : 5
 
         Rectangle {
@@ -486,7 +503,6 @@ Item {
             phase: swimClock.phase
             compact: root.compact
             wanted: root.showFish && index < root.fishCount
-            appearanceSerialProvider: root.nextFishAppearanceSerial
         }
     }
 
@@ -499,7 +515,7 @@ Item {
         phase: swimClock.phase
         compact: root.compact
         z: 5
-        visible: root.showDuck && !root.santaHourWindow && !root.easterHourWindow
+        visible: root.showDuck && !root.santaHourWindow && !root.easterHourWindow && !root.halloweenHourWindow && !root.cakeDayWindow
     }
 
     DrowningSanta {
@@ -520,6 +536,26 @@ Item {
         compact: root.compact
         z: 5
         visible: root.showDuck && root.easterHourWindow
+    }
+
+    DrowningHalloween {
+        aquariumWidth: root.width
+        aquariumHeight: root.height
+        waterSurfaceY: root.waterSurfaceY
+        phase: swimClock.phase
+        compact: root.compact
+        z: 5
+        visible: root.showDuck && root.halloweenHourWindow
+    }
+
+    RockingCake {
+        aquariumWidth: root.width
+        aquariumHeight: root.height
+        waterSurfaceY: root.waterSurfaceY
+        phase: swimClock.phase
+        compact: root.compact
+        z: 5
+        visible: root.showDuck && root.cakeDayWindow
     }
 
     Item {

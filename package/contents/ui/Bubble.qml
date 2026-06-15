@@ -15,7 +15,8 @@ OriginalSprite {
     property real load: 0
     property real phase: 0
 
-    readonly property real speed: (0.18 + load * 0.58 + ((seed * 13) % 11) / 70) * 0.25
+    readonly property real speedVariance: [0.58, 0.72, 0.86, 1.0, 0.64, 0.78, 0.92][seed % 7]
+    readonly property real speed: (0.18 + load * 0.58 + ((seed * 13) % 11) / 70) * 0.112 * speedVariance
     readonly property real cyclePosition: phase * speed + seed * 0.173
     readonly property int cycle: Math.floor(cyclePosition)
     readonly property real cycleTravel: cyclePosition - cycle
@@ -25,7 +26,7 @@ OriginalSprite {
     readonly property real lane: ((seed * 37 + cycle * 53) % 100) / 100
     readonly property int frame: Math.max(0, Math.min(4, Math.floor(travel * 5)))
     readonly property real waterDepth: Math.max(1, aquariumHeight - waterSurfaceY)
-    readonly property real visualScale: 0.90
+    readonly property real visualScale: 0.81
     readonly property real growthScale: 1 - travel * 0.37
     readonly property real ringSize: Math.max(3, (Math.max(width, height) + 1 + travel * 1.89) * visualScale)
     readonly property real sway: Math.sin(phase * 1.2 + seed + cycle * 0.67) * aquariumWidth * (0.012 + travel * 0.018)
@@ -55,7 +56,7 @@ OriginalSprite {
         height: width
         radius: width / 2
         color: "transparent"
-        border.width: Math.max(1, Math.round(root.pixelScale * 0.45))
-        border.color: Qt.rgba(1.0, 1.0, 1.0, 0.88)
+        border.width: Math.max(1, root.pixelScale * 0.28)
+        border.color: Qt.rgba(1.0, 1.0, 1.0, 0.66)
     }
 }
