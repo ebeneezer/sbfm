@@ -28,6 +28,8 @@ KCM.SimpleKCM {
     property string cfg_weatherCondition: "clear"
     property string cfg_weatherLocation: cfg_weatherLocationDefault
     property string cfg_weatherLocationLabel: cfg_weatherLocationLabelDefault
+    property real cfg_weatherLatitude: 0
+    property real cfg_weatherLongitude: 0
     property string cfg_seasonMode: "auto"
     property int cfg_framesPerSecond: 24
     property string cfg_networkInterface: "all"
@@ -40,6 +42,8 @@ KCM.SimpleKCM {
     property string cfg_weatherConditionDefault: "clear"
     property string cfg_weatherLocationDefault: ""
     property string cfg_weatherLocationLabelDefault: ""
+    property real cfg_weatherLatitudeDefault: 0
+    property real cfg_weatherLongitudeDefault: 0
     property string cfg_seasonModeDefault: "auto"
     property int cfg_framesPerSecondDefault: 24
     property string cfg_networkInterfaceDefault: "all"
@@ -187,6 +191,11 @@ KCM.SimpleKCM {
     }
 
     function syncLocationPreviewFromConfig() {
+        if (Number.isFinite(Number(cfg_weatherLatitude)) && Number.isFinite(Number(cfg_weatherLongitude))
+                && (Number(cfg_weatherLatitude) !== 0 || Number(cfg_weatherLongitude) !== 0)) {
+            setLocationPreview(cfg_weatherLatitude, cfg_weatherLongitude);
+            return;
+        }
         const coordinates = parseCoordinates(cfg_weatherLocation);
         if (coordinates) {
             setLocationPreview(coordinates.latitude, coordinates.longitude);
@@ -447,6 +456,8 @@ KCM.SimpleKCM {
                 onTextEdited: {
                     root.cfg_weatherLocation = text;
                     root.cfg_weatherLocationLabel = "";
+                    root.cfg_weatherLatitude = 0;
+                    root.cfg_weatherLongitude = 0;
                     root.locationChoices = [];
                     root.locationSearchStatus = text.trim().length >= 2 ? i18n("Searching for %1...", text.trim()) : "";
                     root.setLocationNotFound();
@@ -487,6 +498,8 @@ KCM.SimpleKCM {
                 }
                 root.cfg_weatherLocation = choice.value;
                 root.cfg_weatherLocationLabel = choice.label;
+                root.cfg_weatherLatitude = choice.latitude;
+                root.cfg_weatherLongitude = choice.longitude;
                 weatherLocationField.text = choice.label;
                 root.locationChoices = [];
                 root.locationSearchStatus = i18n("Selected: %1", choice.label);
@@ -632,6 +645,8 @@ KCM.SimpleKCM {
         }
     }
     onCfg_weatherLocationLabelChanged: syncLocationField()
+    onCfg_weatherLatitudeChanged: syncLocationPreviewFromConfig()
+    onCfg_weatherLongitudeChanged: syncLocationPreviewFromConfig()
     onCfg_framesPerSecondChanged: fpsSlider.value = cfg_framesPerSecond
     onCfg_networkInterfaceChanged: syncNetworkCombo()
 }

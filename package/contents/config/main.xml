@@ -42,6 +42,14 @@
       <label>Display label for the selected weather location.</label>
       <default></default>
     </entry>
+    <entry name="weatherLatitude" type="Double">
+      <label>Latitude used for weather lookup.</label>
+      <default>0</default>
+    </entry>
+    <entry name="weatherLongitude" type="Double">
+      <label>Longitude used for weather lookup.</label>
+      <default>0</default>
+    </entry>
     <entry name="seasonMode" type="String">
       <label>Seasonal character override.</label>
       <default>auto</default>

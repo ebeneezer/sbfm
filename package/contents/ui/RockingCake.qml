@@ -31,7 +31,7 @@ Item {
     width: cakeSize
     height: cakeSize
     x: swimX + sway
-    y: Math.max(0, Math.min(aquariumHeight - height, waterSurfaceY - height * waterlineRatio + bob))
+    y: waterSurfaceY - height * waterlineRatio + bob
     opacity: 0.98
 
     transform: Rotation {

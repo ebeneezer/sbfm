@@ -29,10 +29,17 @@ PlasmoidItem {
     readonly property string weatherCondition: Plasmoid.configuration.weatherCondition || "clear"
     readonly property string weatherLocation: Plasmoid.configuration.weatherLocation || ""
     readonly property string weatherLocationLabel: Plasmoid.configuration.weatherLocationLabel || ""
+    readonly property real configuredWeatherLatitude: Number(Plasmoid.configuration.weatherLatitude)
+    readonly property real configuredWeatherLongitude: Number(Plasmoid.configuration.weatherLongitude)
+    readonly property bool configuredWeatherCoordinatesValid: Number.isFinite(configuredWeatherLatitude)
+                                                           && Number.isFinite(configuredWeatherLongitude)
+                                                           && (configuredWeatherLatitude !== 0 || configuredWeatherLongitude !== 0)
     readonly property var weatherCoordinates: parseCoordinates(weatherLocation)
     readonly property bool weatherCoordinatesValid: weatherCoordinates !== null
-    readonly property real weatherLatitude: weatherCoordinatesValid ? weatherCoordinates.latitude : 0
-    readonly property real weatherLongitude: weatherCoordinatesValid ? weatherCoordinates.longitude : 0
+    readonly property real weatherLatitude: configuredWeatherCoordinatesValid ? configuredWeatherLatitude
+                                                                              : weatherCoordinatesValid ? weatherCoordinates.latitude : 0
+    readonly property real weatherLongitude: configuredWeatherCoordinatesValid ? configuredWeatherLongitude
+                                                                               : weatherCoordinatesValid ? weatherCoordinates.longitude : 0
     readonly property bool weatherLookupEnabled: weatherLocation.trim().length > 0
     readonly property bool liveWeatherActive: liveWeatherCondition.length > 0
     readonly property string effectiveWeatherCondition: liveWeatherActive ? liveWeatherCondition : weatherCondition
@@ -246,6 +253,14 @@ PlasmoidItem {
         const serial = weatherRequestSerial;
         if (location.length === 0) {
             resetLiveWeather("");
+            return;
+        }
+
+        if (configuredWeatherCoordinatesValid) {
+            fetchWeatherFor(configuredWeatherLatitude, configuredWeatherLongitude,
+                            weatherLocationLabel.length > 0 ? weatherLocationLabel
+                                                            : configuredWeatherLatitude.toFixed(3) + ", " + configuredWeatherLongitude.toFixed(3),
+                            serial);
             return;
         }
 

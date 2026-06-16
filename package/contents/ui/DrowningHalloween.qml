@@ -46,7 +46,7 @@ Item {
     width: pumpkinSize
     height: pumpkinSize
     x: swimX + sway
-    y: Math.max(0, Math.min(aquariumHeight - height, waterSurfaceY - height * waterlineRatio + bob))
+    y: waterSurfaceY - height * waterlineRatio + bob
     opacity: 0.96
 
     transform: Rotation {
